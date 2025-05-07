@@ -1,0 +1,81 @@
+---
+title: "Niche construction model with flammability and fire-suppression"
+author: "Hermina"
+Date: "2025-05-07"
+output:
+  html_document:
+    df_print: paged
+    code_folding: hide
+    toc: true
+    toc_float:
+      smooth_scroll: false
+  pdf_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2)
+library(tidyr)
+library(purrr)
+library(dplyr)
+library(deSolve)
+library(patchwork)
+library(kableExtra)
+library(shiny)
+```
+
+# Introduction
+
+Fire can restructure ecosystems because some species tend to be fire-prone (e.g., accumulate highly flammable biomass, grow quickly after fire, may even require fire to germinate) while others can be fire-resistant or even fire-retardant ("fire fighting"). This is called a feedback, here between vegetation type and fire probability.
+
+Fire-facilitating and fire-inhibiting species are both ecosystem engineers that can lead to mutual exclusion under some conditions and coexistence under other conditions. Coexistence depends on the environmentaly-determined frequency of fire and whether/how fire frequency is impacted by vegetation-fire feedbacks.
+
+Here I am coding (and simplifying) the model of [Beckage, Platt, & Gross 2009](https://www.journals.uchicago.edu/doi/10.1086/648458). Their model has 3 species but I am simplifying it to just 2.
+
+Some notes:
+Although the paper above talks about savannas, the following biomes are also [pre-climate change] fire-dependent: boreal/taiga forest (for Siberian Taiga, this seems like once every 10 years) < shrublands < grasslands (of which savanna is an example).  
+[see this paper for some recent remote sensing data on tropical savannas](https://www.sciencedirect.com/science/article/pii/S1569843223003990). These comprise $\approx 70$% of the total area that is burned on Earth and fires can easily happen annually (e.g., the paper above looks at 1km pixels and considers <40 active fires per year as too low; max of their data is >200 fires per year).
+
+# The model
+
+We have 2 species, a grass ($G$) and a tree ($A$), which are both self-limiting. Trees grow slower than grass ($\lambda<1$) but grass growth is limited by trees (i.e., whereas tree growth is *not* limited by grass). Fires occur at some constant rate determined by the environment ($\epsilon$). Fires can also occur more frequently through positive feedback proportional to the grass biomass and the flammability of the grass ($\phi \in [0,1)$) or more rarely through negative feedback proportional to the tree biomass and the fire suppression strength of the trees ($\rho \in [0,1)$). Finally, when a fire occurs, the fraction of biomass lost depends on $\mu \in (0,1)$ and can differ between trees ($\mu_A$) versus grass ($\mu_G$).
+
+\[
+\begin{align}
+\frac{dA}{dt} &= \lambda A(1-A) -\mu_A A (\epsilon + \phi G)(1-\rho A),\\
+\frac{dG}{dt} &= G(1-G-A) -\mu_G G (\epsilon + \phi G)(1-\rho A),
+\end{align}
+\]
+
+where $T, G \in (0,1)$. I think $T + G = 1$ (???)
+
+The units of time ($t$) are relative to the (implicitly defined) growth rate of grass. Let's say the unit of $t$ is month, that way $\epsilon = 0.01$ corresponds with $\approx 1$ fire every 8 years.
+
+TO DO: here I can insert a table of variables
+TO DO: and here I can add a table of parameters
+
+TO DO eventually: figure out a diagram for this s.t. it's easy for students to sketch the model
+
+Show a bit of the code so that students can get an idea of what it looks like:
+
+```{r ODE_model_show}
+# define the model
+#' @param time vector of time units over which to run model
+#' @param init initial tree and grass biomass
+#' @param params: lambda (growth rate of trees relative to grass),
+#' epsilon (constant, environmentaly determined rate of fire),
+#' phi (grass flammability), rho (tree fire suppression), and
+#' fraction of biomass lost to fire for trees (mu_T) or grass (mu_G)
+ODE <- function(time, init, params) {
+  with (as.list(c(time, init, params)), {
+    # define the differential equations:
+    dT_dt = lambda*A*(1-A) - mu_A*A*(epsilon + phi*G)*(1-rho*A)
+    dG_dt = G*(1-G-A) - mu_G*G*(epsilon + phi*G)*(1-rho*A)
+    return(list(c(dT = dT_dt, dG = dG_dt)))
+  })
+}
+```
+
