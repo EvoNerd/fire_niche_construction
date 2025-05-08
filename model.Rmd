@@ -5,7 +5,7 @@ Date: "2025-05-07"
 output:
   html_document:
     df_print: paged
-    code_folding: hide
+    code_folding: show
     toc: true
     toc_float:
       smooth_scroll: false
@@ -25,6 +25,20 @@ library(deSolve)
 library(patchwork)
 library(kableExtra)
 library(shiny)
+library(bslib) # for most recent recommended UI options
+
+# set the default plot style
+fave_theme <- theme_light() + # see other options at https://ggplot2.tidyverse.org/reference/ggtheme.html
+  theme(text = element_text(size=18), # larger text size for titles & axes
+        panel.grid.major = element_blank(), # remove major gridlines
+        panel.grid.minor = element_blank()) # remove minor gridlines
+theme_set(fave_theme)
+
+# increase the default thickness of lines for all geom objects in ggplot2
+update_geom_defaults("line", list(linewidth = 2.5, alpha=0.8))
+
+# define tree and grass colours
+colours_tree_grass = c("#006600", "#ffbf00")
 ```
 
 # Introduction
@@ -50,7 +64,7 @@ We have 2 species, a grass ($G$) and a tree ($A$), which are both self-limiting.
 \end{align}
 \]
 
-where $T, G \in (0,1)$. I think $T + G = 1$ (???)
+where $T, G \in (0,1)$. One question: confirm that $T + G \neq 1$. We can initialize the model using relative abundance but, annoyingly enough, it seems that the total biomass is not capped at 1.0...
 
 The units of time ($t$) are relative to the (implicitly defined) growth rate of grass. Let's say the unit of $t$ is month, that way $\epsilon = 0.01$ corresponds with $\approx 1$ fire every 8 years.
 
@@ -68,14 +82,168 @@ Show a bit of the code so that students can get an idea of what it looks like:
 #' @param params: lambda (growth rate of trees relative to grass),
 #' epsilon (constant, environmentaly determined rate of fire),
 #' phi (grass flammability), rho (tree fire suppression), and
-#' fraction of biomass lost to fire for trees (mu_T) or grass (mu_G)
+#' fraction of biomass lost to fire for trees (mu_A) or grass (mu_G)
 ODE <- function(time, init, params) {
   with (as.list(c(time, init, params)), {
     # define the differential equations:
-    dT_dt = lambda*A*(1-A) - mu_A*A*(epsilon + phi*G)*(1-rho*A)
+    dA_dt = lambda*A*(1-A) - mu_A*A*(epsilon + phi*G)*(1-rho*A)
     dG_dt = G*(1-G-A) - mu_G*G*(epsilon + phi*G)*(1-rho*A)
-    return(list(c(dT = dT_dt, dG = dG_dt)))
+    return(list(c(dA = dA_dt, dG = dG_dt)))
   })
 }
 ```
+
+## Code
+
+```{r model_functions}
+# a function to run forward time simulations
+run_ODE_model <- function(time, init, params) {
+  # check for fully neutral system
+  #if (...) {
+    # it's trivial to simulate the neutral dynamics:
+  #} else {
+    # solve the system of ODE's for the requested time points:
+    data.frame(ode(func = ODE, y = init, parms = params, times = time, method="ode23"))
+  #}
+}
+
+# a function to plot biomass over time
+plot_time_relAbund <- function(sim_df, params, title_text=NA){
+  # convert from absolute abundance to relative abundances
+  sim_df$relA <- sim_df$A / (sim_df$A + sim_df$G)
+  sim_df$relG <- sim_df$G / (sim_df$A + sim_df$G)
+  
+  # change the data.frame from wide format to long format for plotting
+  sim_df_long <- sim_df %>% select(-A, -G) %>% rename(Trees = relA, Grass = relG) %>%
+                  pivot_longer(cols = !time, names_to = "Group") %>%
+                    mutate(Group = factor(Group, levels = c("Trees", "Grass")))
+  # plot
+  ggplot(sim_df_long) +
+    geom_line(aes(x = time, y = value, colour = Group)) +
+    scale_colour_manual(values = colours_tree_grass) +
+    labs(y = "Relative Abundance", x = "Time (months)",
+         title = ifelse(is.na(title_text),
+                        paste(params, collapse = ", "),
+                        title_text) ) +
+    scale_y_continuous(limits = c(-0.01, 1.01), expand = c(0, 0)) # important to set expand to 0,0 otherwise there's extra padding that makes it look like things aren't going to 0 or 1
+}
+```
+
+# Exploring the model
+
+Below I'm going to run some test cases to explore parameter combinations and resultant outcomes.
+
+```{r explore_model}
+time_vec <- seq(from=1, to=1000, by=1)
+init_mostlytrees <- c(A=0.9, G=0.1)
+init_mostlygrass <- c(A=0.1, G=0.9)
+
+
+# trees dominate the ecosystem in the absence of fire
+pars_temp <- c(lambda=0.01, epsilon=0, phi=0, rho=0, mu_A=0.1, mu_G=0.1)
+
+run_ODE_model(time = time_vec,
+              init = init_mostlygrass,
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+
+# sufficiently frequent fires are an environmental driver:
+# it shifts the ecosystem to grass dominated
+pars_temp <- c(lambda=0.01, epsilon=0.15, phi=0, rho=0, mu_A=0.1, mu_G=0.1)
+
+run_ODE_model(time = time_vec,
+              init = init_mostlytrees,
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+
+# intermediate fire frequency leads to coexistence
+pars_temp <- c(lambda=0.01, epsilon=0.051, phi=0, rho=0, mu_A=0.1, mu_G=0.1)
+
+run_ODE_model(time = time_vec,
+              init = init_mostlytrees,
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+
+run_ODE_model(time = time_vec,
+              init = init_mostlygrass,
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+
+# grass-fire positive feedback shifts the coexistence in favour of grasses
+pars_temp <- c(lambda=0.01, epsilon=0.051, phi=0.04, rho=0, mu_A=0.1, mu_G=0.1)
+run_ODE_model(time = time_vec,
+              init = init_mostlygrass,
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+# but trees cannot hold off grass invasion
+run_ODE_model(time = time_vec,
+              init = c(A=0.999, G=1e-15),
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+# sufficiently strong grass-fire positive feedback leads to grass dominance
+pars_temp <- c(lambda=0.01, epsilon=0.051, phi=0.4, rho=0, mu_A=0.1, mu_G=0.1)
+run_ODE_model(time = time_vec,
+              init = init_mostlytrees,
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+
+# adding tree-fire negative feedback shifts the coexistence in favour of trees
+pars_temp <- c(lambda=0.01, epsilon=0.051, phi=0.04, rho=0.75, mu_A=0.1, mu_G=0.1)
+run_ODE_model(time = time_vec,
+              init = init_mostlygrass,
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+run_ODE_model(time = time_vec,
+              init = init_mostlytrees,
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+# I think grass cannot hold off tree invasion indefinitely
+run_ODE_model(time = 1:10000,
+              init = c(A=1e-5, G=0.999),
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+
+# only tree-fire negative feedback with environmental driver
+  # shifts to coexistence in favour of trees
+pars_temp <- c(lambda=0.01, epsilon=0.051, phi=0, rho=0.75, mu_A=0.1, mu_G=0.1)
+run_ODE_model(time = time_vec,
+              init = init_mostlygrass,
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+# grass cannot hold off tree invasion indefinitely
+run_ODE_model(time = 1:10000,
+              init = c(A=1e-15, G=0.999),
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+```
+
+## 2 stable states:
+
+It might be possible to have some more interesting effect of initial conditions by playing around with phi and rho. See bistability in top left corner [Fig. 4 of D'Odorico et al., 2006](https://doi.org/10.1086/500617). But that model is stochastic so maybe this phenomenon won't appear in our model.
+
+```{r big_fires}
+# finally, let's modify mu_A and mu_G: the effect size of fire
+  # in D'Odorico et al., 2006 they found large effect sizes of infrequent fires showed bistability
+pars_temp <- c(lambda=0.01, epsilon=0.051, phi=0.07, rho=0.9, mu_A=0.107, mu_G=0.6)
+run_ODE_model(time = 1:10000,
+              init = init_mostlytrees,
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+
+run_ODE_model(time = time_vec,
+              init = init_mostlygrass,
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+# HHHHHAAAAA!! fOUND IT!!!:
+run_ODE_model(time = 1:10000,
+              init = c(A=0.48, G=0.52),
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+run_ODE_model(time = 1:10000,
+              init = c(A=0.47, G=0.53),
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+```
+
+Hurray!!! The unstable equilbrium point is around 50/50 **and** the none of the parameter values get cranked up to ridiculous values. That's great!
 
