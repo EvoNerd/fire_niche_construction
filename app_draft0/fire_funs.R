@@ -7,13 +7,17 @@ library(tidyverse) # for pipe syntax
 library(deSolve)   # for solving ordinary differential equations
 library(ggplot2)   # for plotting the time series
 library(patchwork) # for combining ggplots in the time series
+library(ggarrow)   # for ridiculously complex fancy arrows
+library(png)       # for fire emoji
+library(grid)      # also for fire emoji
+
 
 # define colour scheme for species
 # use rgb to set transparency (alpha = 0.75) # note that max value for alpha is 255 so 0.75*255 ~ 191
 colours_species <- c(arbour = rgb(0, 102, 0, maxColorValue = 255, alpha = 191),  # Forest green
                      grass = rgb(244, 212, 48, maxColorValue = 255, alpha = 191)) # Gold
 colour_dA <- "#2D1C56"
-colour_fire <- "red"
+colour_fire <- "#FF0000"
 
 ###################################
 # define simulation functions
@@ -156,23 +160,96 @@ get_steady_state <- function(params, dA.df){
 # define visualization functions
 ###################################
 
-# plot schematic of fire biotic-feedbacks
-  ## currently not sure what to plot so it's a filler for now.
-plot_schematic <- function(params) {
-  # Create empty plot
-  plot(x = 0:1, y = 0:1,
-       ann = F, bty = "n", type = "n", xaxt = "n", yaxt = "n")
-  # Add some text
-  text(x = 0.5, y = 0.5,
-       "Interactive model schematic goes here.\nStephan, plz help! D:", 
-       cex = 1.2)
+
+# Function to generate coordinates for just under 3/4 circle
+generate_circle <- function(center = c(0, 0), radius = 1, npoints = 50) {
+  theta <- seq(0.55 * pi, 2 * pi, length.out = npoints)
+  x <- center[1] + radius * cos(theta)
+  y <- center[2] + radius * sin(theta)
+  data.frame(x = x, y = y)
+}
+
+# plot the bottom layers of the schematic
+  # this gets called one time at the very beginning
+plot_schem_static <- function(){
+  # default white space btw node & line segment
+  whitespace <- 0.2
+  # default arrow & line segment thickness
+  thicc <- 0.7
   
-  # record the plot as a variable
-  the.plot <- recordPlot()
-  # reset the device
-  dev.off()
+  # define the width and height of the filled rectangles
+  rect_HALFwidth <- 1.2
+  rect_HALFheight <- 0.35
+  # define the width and height of the white rectangles
+  white_FIREwidth <- 0.55
+  white_CLIMATEwidth <- 1.12
+  white_HALFheight <- 0.25
   
-  return(the.plot)
+  # fire
+  fire_emoji <- rasterGrob(readPNG("fire_emoji.png"), width = unit(1, "npc"), height = unit(1, "npc"))
+  
+  # Create a data.frame to define the rectangles and text
+  rect_coords <- data.frame(
+    rect_fill = c(colours_species, rep("white", 2)),
+    x_center = c(1, 1, 4, 7), # 3 evenly spaced columns
+    y_center = c(4.5, 1, 2.75, 3.625) # fire in middle of trees & grass. Climate in middle of trees & fire.
+  )
+  # name the rows by the "compartments"
+  row.names(rect_coords) = c("Trees", "Grasses", "Fire", "Climate")
+  # use the center points and rectangle dimensions to get edge coordinates
+  rect_coords$left  <-  rect_coords$x_center - c(rep(rect_HALFwidth, 2), white_FIREwidth, white_CLIMATEwidth)
+  rect_coords$right  <- rect_coords$x_center + c(rep(rect_HALFwidth, 2), white_FIREwidth, white_CLIMATEwidth)
+  rect_coords$bottom <- rect_coords$y_center - rep(c(rect_HALFheight, white_HALFheight), each=2)
+  rect_coords$top  <-   rect_coords$y_center + rep(c(rect_HALFheight, white_HALFheight), each=2)
+  
+  # add a fire emoji on the bottom layer
+  schematic <- ggplot() +
+                annotation_custom(fire_emoji, xmin = 3.7, xmax = 4.9, ymin = 2.35, ymax = 4.15)
+  
+  # begin making the plot. Put the rectangles on the lowest layer
+  schematic <- schematic +
+    # Add rectangles
+    geom_rect(data = rect_coords,
+              aes(xmin = left, xmax = right, ymin = bottom, ymax = top), 
+              fill = rect_coords$rect_fill, color = rep(c("black", "white"), each=2),
+              linewidth=thicc/5) +
+    # Add text labels
+    geom_text(data = rect_coords,
+              aes(x = x_center, y = y_center, label = row.names(rect_coords)), 
+              size = 8) +
+    
+    # add circle arrow for trees --| trees
+    geom_arrow(data = generate_circle(center = c(rect_coords["Trees", "left"], rect_coords["Trees", "bottom"]-0.1),
+                                      radius = rect_HALFheight*1.15),
+               aes(x=x, y=y),
+               arrow_head = arrow_head_line(angle = 90, lineend = "square"),
+               length_head = unit(4, "mm"),
+               linewidth = thicc) +
+    
+    # add straight arrow for trees --| grasses
+    geom_arrow(data = data.frame(x = c(rect_coords["Trees", "x_center"], rect_coords["Grasses", "x_center"]),
+                                 y = c(rect_coords["Trees", "bottom"] - whitespace, rect_coords["Grasses", "top"] + whitespace)),
+               aes(x=x, y=y),
+               arrow_head = arrow_head_line(angle = 90, lineend = "square"),
+               length_head = unit(4, "mm"),
+               linewidth = thicc)
+              
+  
+  # finally set limits and theme
+  schematic <- schematic +
+    scale_x_continuous(limits = c(min(rect_coords$left)-0.4, max(rect_coords$right))) +
+    scale_y_continuous(limits = c(min(rect_coords$bottom), max(rect_coords$top))) +
+    theme_void() +
+    coord_fixed()
+  
+  return(schematic)
+}
+
+# add just the remaining arrows to the schematic
+plot_schem_arrows <- function(params){
+  # muA arrow
+  # epsilon arrow
+  geom_text(data = data.frame(x=0.1, y=0.7, val=paste0(params, collapse = "")), aes(x=x, y=y, label=val))
 }
 
 # # a function to plot the community over finite time
@@ -455,12 +532,6 @@ plot_dA_by_A <- function(dA.df, steady_state){
           )
   }
   
-  # record the plot as a variable
-  the.plot <- recordPlot()
-  # reset the device
-  dev.off()
-  
-  return(the.plot)
 }
 
 

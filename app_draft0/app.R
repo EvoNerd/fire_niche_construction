@@ -83,13 +83,6 @@ ui <- fluidPage(
                        min = 0.01, max = 0.19,
                        step = 0.02)
     ),
-    #column(4,
-    #       sliderInput(inputId = "E_slider",
-    #                   label = "Frequency of Fire $(F)$",
-    #                   value = 0.09, 
-    #                   min = 0.04, max = 0.94,
-    #                   step = 0.05)
-    #),
     column(4,
            sliderInput(inputId = "A0_slider",
                        label = "Initial Tree Density $(T_0)$",
@@ -110,7 +103,7 @@ ui <- fluidPage(
   layout_columns(height="600px",
     card(
       #card_header("Model schematic & Equation"),
-      plotOutput("plot_schematic"),
+      plotOutput("plot_schematic", height = "298px"),
       uiOutput("dynamEq"),
       card_style = "width: 3000;"
     ),
@@ -136,6 +129,7 @@ server <- function(input, output) {
   # fix the environmental frequency of fire 
   # be careful to choose a value that does *NOT* result in neutral system
   E <- 0.09
+  static_schematic <- plot_schem_static()
   
   ######################
   # expressions
@@ -179,7 +173,7 @@ server <- function(input, output) {
     withMathJax(sprintf(the_eqn, muA, Ep))
   })
   # render model schematic:
-  output$plot_schematic <- renderPlot({plot_schematic(curr_params())})
+  output$plot_schematic <- renderPlot({static_schematic + plot_schem_arrows(curr_params())})
   # render Group Frequencies over Time plot
   output$plot_species_time <- renderPlot({ggplot_t_finiteANDoutcome(sim_df = sims(),
                                                                     steady_state = outcome())})

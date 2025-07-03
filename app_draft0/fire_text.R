@@ -18,7 +18,7 @@ text_subtitle <- paste0(html_col1, "When the fraction of trees lost per fire is 
 # Introduction
 text_intro <- paste0("Imagine two vegetation groups with different responses to fire, fire-prone grasses and fire-resistant trees.
 
-In an environment with frequent fires (once per decade, environmentally-driven fire frequency: $F = 0.09$), you might expect that grasses will always dominate. But this changes when we consider the functional traits of the ecosystem members:
+In a climate with frequent fires (once per decade, fire frequency: $F = 0.09$), you might expect that grasses will always dominate. But this changes when we consider the functional traits of the ecosystem members:
 
 - ",html_col2,"**Trees:**</span> grow slowly (max. 0.1 biomass increase per year) and limit their own growth by $1 - \\text{tree density}$. Their biomass *decreases* the frequency of fires by $F(1 - \\text{tree density})$. 
 <br>The **fraction of trees lost per fire ($L$)** depends on a slider-controlled value.
