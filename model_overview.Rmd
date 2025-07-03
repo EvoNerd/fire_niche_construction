@@ -19,13 +19,14 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(ggplot2)
 library(tidyr)
-library(purrr)
+#library(purrr)
 library(dplyr)
 library(deSolve)
-library(patchwork)
-library(kableExtra)
-library(shiny)
-library(bslib) # for most recent recommended UI options
+library(phaseR)
+#library(patchwork)
+#library(kableExtra)
+#library(shiny)
+#library(bslib) # for most recent recommended UI options
 
 # set the default plot style
 fave_theme <- theme_light() + # see other options at https://ggplot2.tidyverse.org/reference/ggtheme.html
@@ -86,9 +87,18 @@ Show a bit of the code so that students can get an idea of what it looks like:
 ODE <- function(time, init, params) {
   with (as.list(c(time, init, params)), {
     # define the differential equations:
-    dA_dt = lambda*A*(1-A) - mu_A*A*(epsilon + phi*G)*(1-rho*A)
-    dG_dt = G*(1-G-A) - mu_G*G*(epsilon + phi*G)*(1-rho*A)
-    return(list(c(dA = dA_dt, dG = dG_dt)))
+    dx_dt = lambda*x*(1-x) - mu_A*x*(epsilon + phi*y)*(1-rho*x)
+    dy_dt = y*(1-y-x) - mu_G*y*(epsilon + phi*y)*(1-rho*x)
+    return(list(c(dx = dx_dt, dy = dy_dt)))
+  })
+}
+
+ODE_simplified <- function(time, init, params) {
+  with (as.list(c(time, init, params)), {
+    # define the differential equations:
+    dy_dt = lambda*y*(1-y) - mu_A*y*(epsilon + phi*(1-y))*(1-rho*y)
+    dx_dt = -dy_dt
+    return(list(c(dx = dx_dt, dy = dy_dt)))
   })
 }
 ```
@@ -103,18 +113,18 @@ run_ODE_model <- function(time, init, params) {
     # it's trivial to simulate the neutral dynamics:
   #} else {
     # solve the system of ODE's for the requested time points:
-    data.frame(ode(func = ODE, y = init, parms = params, times = time, method="ode23"))
+    data.frame(ode(func = ODE_simplified, y = init, parms = params, times = time, method="ode23"))
   #}
 }
 
 # a function to plot biomass over time
 plot_time_relAbund <- function(sim_df, params, title_text=NA){
   # convert from absolute abundance to relative abundances
-  sim_df$relA <- sim_df$A / (sim_df$A + sim_df$G)
-  sim_df$relG <- sim_df$G / (sim_df$A + sim_df$G)
+  sim_df$relx <- sim_df$x / (sim_df$x + sim_df$y)
+  sim_df$rely <- sim_df$y / (sim_df$x + sim_df$y)
   
   # change the data.frame from wide format to long format for plotting
-  sim_df_long <- sim_df %>% select(-A, -G) %>% rename(Trees = relA, Grass = relG) %>%
+  sim_df_long <- sim_df %>% select(-x, -y) %>% rename(Trees = relx, Grass = rely) %>%
                   pivot_longer(cols = !time, names_to = "Group") %>%
                     mutate(Group = factor(Group, levels = c("Trees", "Grass")))
   # plot
@@ -127,6 +137,121 @@ plot_time_relAbund <- function(sim_df, params, title_text=NA){
                         title_text) ) +
     scale_y_continuous(limits = c(-0.01, 1.01), expand = c(0, 0)) # important to set expand to 0,0 otherwise there's extra padding that makes it look like things aren't going to 0 or 1
 }
+
+# a function to plot the phase plane diagram
+plot_phase_plane <- function(params, init) {
+  clines <- nullclines(ODE,
+                       xlim = c(-0.1,1.1),
+                       ylim = c(-0.1,1.1),
+                       parameters = params,
+                       add.legend = FALSE, add=FALSE)
+  vectors <- flowField(ODE,
+                       xlim = c(0,1),
+                       ylim = c(0,1),
+                       parameters = params,
+                       points = 7,
+                       add = TRUE)
+  path <- trajectory(ODE,
+                     parameters = params,
+                     y0 = init,
+                     tlim = c(0, 1000),
+                     tstep = 1)
+}
+# this looks quite good:
+plot_phase_plane(params = c(lambda=0.1, epsilon=0.01, phi=1, rho=1, mu_A=0.1, mu_G=0.1),
+                 init = c(0.5, 0.5))
+plot_phase_plane(params = c(lambda=0.1, epsilon=0.01, phi=1, rho=1, mu_A=0.1, mu_G=0.1),
+                 init = c(0.001, 0.999))
+
+plot_phase_plane(params = c(lambda=0.1, epsilon=0.01, phi=1, rho=1, mu_A=0.15, mu_G=0.1),
+                 init = c(0.3, 0.7))
+plot_phase_plane(params = c(lambda=0.1, epsilon=0.01, phi=1, rho=1, mu_A=0.15, mu_G=0.1),
+                 init = c(0.29, 0.71))
+
+plot_phase_plane(params = c(lambda=0.1, epsilon=0.01, phi=1, rho=1, mu_A=0.2, mu_G=0.1),
+                 init = c(0.49, 0.51))
+plot_phase_plane(params = c(lambda=0.1, epsilon=0.01, phi=1, rho=1, mu_A=0.2, mu_G=0.1),
+                 init = c(0.48, 0.52))
+
+
+# let's try to simplify
+plot_phase_simple <- function(params, init) {
+  clines <- nullclines(ODE_simplified,
+                       xlim = c(-0.1,1.1),
+                       ylim = c(-0.1,1.1),
+                       parameters = params,
+                       add.legend = FALSE, add=FALSE)
+  vectors <- flowField(ODE_simplified,
+                       xlim = c(0,1),
+                       ylim = c(0,1),
+                       parameters = params,
+                       points = 7,
+                       add = TRUE)
+  path <- trajectory(ODE_simplified,
+                     parameters = params,
+                     y0 = init,
+                     tlim = c(0, 1000),
+                     tstep = 1)
+}
+
+plot_phase_simple(params = c(lambda=0.1, epsilon=0.01, phi=1, rho=1, mu_A=0.1, mu_G=0.1),
+                 init = c(0.9, 0.1))
+plot_phase_simple(params = c(lambda=0.1, epsilon=0.01, phi=1, rho=1, mu_A=0.1, mu_G=0.1),
+                 init = c(0.01, 0.99))
+
+phasePortrait(ODE_simplified,
+              ylim   = c(0, 1),
+              points = 10,
+              frac   = 0.5,
+              parameters = c(lambda=1, epsilon=0.01, phi=1, rho=1, mu_A=1, mu_G=0.1))
+
+# 1 attractor: trees
+plot_phase_simple(params = c(lambda=0.1, epsilon=0.07, phi=1, rho=1, mu_A=0.08, mu_G=0.5),
+                 init = c(0.5, 0.5))
+plot_phase_simple(params = c(lambda=0.1, epsilon=0.07, phi=1, rho=1, mu_A=0.08, mu_G=0.5),
+                 init = c(0.95, 0.05))
+# 2 attractors: trees or grass
+plot_phase_simple(params = c(lambda=0.1, epsilon=0.07, phi=1, rho=1, mu_A=0.1, mu_G=0.1),
+                 init = c(0.5, 0.5))
+plot_phase_simple(params = c(lambda=0.1, epsilon=0.07, phi=1, rho=1, mu_A=0.1, mu_G=0.1),
+                 init = c(0.95, 0.05))
+
+plot_phase_simple(params = c(lambda=0.1, epsilon=0.07, phi=1, rho=1, mu_A=0.11, mu_G=0.1),
+                 init = c(0.5, 0.5))
+plot_phase_simple(params = c(lambda=0.1, epsilon=0.07, phi=1, rho=1, mu_A=0.11, mu_G=0.1),
+                 init = c(0.95, 0.05))
+
+plot_phase_simple(params = c(lambda=0.1, epsilon=0.07, phi=1, rho=1, mu_A=0.18, mu_G=0.1),
+                 init = c(0.4, 0.6))
+plot_phase_simple(params = c(lambda=0.1, epsilon=0.07, phi=1, rho=1, mu_A=0.18, mu_G=0.1),
+                 init = c(0.7, 0.3))
+
+# what happens if fire frequency were to increase by 10x?
+plot_phase_simple(params = c(lambda=0.1, epsilon=0.7, phi=1, rho=1, mu_A=0.18, mu_G=0.1),
+                 init = c(0.4, 0.6))
+plot_phase_simple(params = c(lambda=0.1, epsilon=0.7, phi=1, rho=1, mu_A=0.18, mu_G=0.1),
+                 init = c(0.7, 0.3))
+
+run_ODE_model(time = time_vec,
+              init = c(x=0.51, y=0.49),
+              params = c(lambda=1, epsilon=0.01, phi=1, rho=1, mu_A=1.96, mu_G=0.1)) %>%
+    plot_time_relAbund(., pars_temp)
+
+
+
+phasePortrait(ODE_simplified,
+              ylim   = c(0, 1),
+              points = 10,
+              frac   = 0.5,
+              parameters = c(lambda=1, epsilon=0.01, phi=1, rho=1, mu_A=1.96, mu_G=0.1))
+
+# I'm a bit confused that the arrows appear to be backwards...
+phasePortrait(ODE_simplified,
+              ylim   = c(0, 1),
+              points = 10,
+              frac   = 0.5,
+              parameters = c(lambda=0.1, epsilon=0.01, phi=1, rho=1, mu_A=0.9, mu_G=0.1))
+
 ```
 
 # Exploring the model
@@ -135,8 +260,8 @@ Below I'm going to run some test cases to explore parameter combinations and res
 
 ```{r explore_model}
 time_vec <- seq(from=1, to=1000, by=1)
-init_mostlytrees <- c(A=0.9, G=0.1)
-init_mostlygrass <- c(A=0.1, G=0.9)
+init_mostlytrees <- c(x=0.9, y=0.1)
+init_mostlygrass <- c(x=0.1, y=0.9)
 
 
 # trees dominate the ecosystem in the absence of fire
@@ -177,7 +302,7 @@ run_ODE_model(time = time_vec,
     plot_time_relAbund(., pars_temp)
 # but trees cannot hold off grass invasion
 run_ODE_model(time = time_vec,
-              init = c(A=0.999, G=1e-15),
+              init = c(x=0.999, y=1e-15),
               params = pars_temp) %>%
     plot_time_relAbund(., pars_temp)
 # sufficiently strong grass-fire positive feedback leads to grass dominance
@@ -199,7 +324,7 @@ run_ODE_model(time = time_vec,
     plot_time_relAbund(., pars_temp)
 # I think grass cannot hold off tree invasion indefinitely
 run_ODE_model(time = 1:10000,
-              init = c(A=1e-5, G=0.999),
+              init = c(x=1e-5, y=0.999),
               params = pars_temp) %>%
     plot_time_relAbund(., pars_temp)
 
@@ -212,7 +337,7 @@ run_ODE_model(time = time_vec,
     plot_time_relAbund(., pars_temp)
 # grass cannot hold off tree invasion indefinitely
 run_ODE_model(time = 1:10000,
-              init = c(A=1e-15, G=0.999),
+              init = c(x=1e-15, y=0.999),
               params = pars_temp) %>%
     plot_time_relAbund(., pars_temp)
 ```
@@ -236,13 +361,27 @@ run_ODE_model(time = time_vec,
     plot_time_relAbund(., pars_temp)
 # HHHHHAAAAA!! fOUND IT!!!:
 run_ODE_model(time = 1:10000,
-              init = c(A=0.48, G=0.52),
+              init = c(x=0.48, y=0.52),
               params = pars_temp) %>%
     plot_time_relAbund(., pars_temp)
 run_ODE_model(time = 1:10000,
-              init = c(A=0.47, G=0.53),
+              init = c(x=0.47, y=0.53),
               params = pars_temp) %>%
     plot_time_relAbund(., pars_temp)
+
+# there's also this equilibrium point:
+run_ODE_model(time = 1:10000,
+              init = c(x=0.4746131, y=0.4959260),
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+
+# ...and this one:
+run_ODE_model(time = 1:10000,
+              init = c(x=0.8367652, y=0.1540815),
+              params = pars_temp) %>%
+    plot_time_relAbund(., pars_temp)
+
+plot_phase_plane(pars_temp)
 ```
 
 Hurray!!! The unstable equilbrium point is around 50/50 **and** the none of the parameter values get cranked up to ridiculous values. That's great!

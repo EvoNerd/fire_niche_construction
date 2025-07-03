@@ -1,0 +1,197 @@
+# a shiny app to explore bistability in the context of ecological feedbacks
+#   this is the main file. It loads dependencies then runs the app.
+#author: Ana-Hermina Ghenu
+#date: 2025-07-01
+
+# load the environment
+source("fire_funs.R")
+source("fire_text.R")
+library(shiny) # for app
+library(bslib) # for most recent recommended UI options
+library(thematic) # for converting R plots to have consistent theme as from bslib
+
+# set the theme for bslib objects
+app_theme <- bs_theme(bootswatch = "simplex", # set simplex theme
+                      version = 5,
+                      primary = colour_dA, # set the primary: this matches colour used for dA
+                      secondary = colours_species["arbour"]) # secondary colour matches trees 
+
+###################################
+# define the app
+###################################
+
+# call thematic before launching the shiny
+  # this will integrate the theme from bslib to how the plots are displayed
+thematic_shiny(font = font_spec("auto", scale = 1.53))
+
+# user interface
+ui <- fluidPage(
+
+  theme = app_theme,
+  
+  # set all cards to have a white background
+  tags$head(
+    tags$style(HTML("
+      .card {
+        background-color: white !important;
+      }
+    "))
+  ),
+  
+  # typeset math using latex code
+  withMathJax(),
+  # allow in-line LaTeX via $ in mathjax.
+  tags$div(HTML("<script type='text/x-mathjax-config' >
+            MathJax.Hub.Config({
+            tex2jax: {inlineMath: [['$','$'], ['\\\\(','\\\\)']]}
+            });
+            </script >
+            ")),
+
+  # Title
+  titlePanel("Ecosystem restructuring by fire"),
+  
+  # a subtitle / summary can be added here:
+  markdown(text_subtitle),
+  
+  navset_card_pill(# use pill-shaped buttons to navigate
+    # explain what the tabs on this card do
+    title = "Select a topic:",
+    
+    nav_panel("Introduction",
+              markdown(text_intro)),
+
+    nav_panel("How to use the app", markdown(text_howto)),
+    
+    nav_panel("What's going on?", markdown(text_huh)),
+    
+    nav_panel("Fire feedback", markdown(text_feedback)),
+    
+    nav_panel("Things to try", markdown(text_try)),
+    
+    nav_panel("Optional: code", markdown(text_code)),
+    
+    nav_panel("Summary", markdown(text_summary))
+  ),
+  
+  # Top row with sliders
+  fluidRow(
+    column(4,
+           sliderInput(inputId = "muA_slider",
+                       label = "Fraction of Trees Lost per fire $(L)$",
+                       value = 0.03, 
+                       min = 0.01, max = 0.19,
+                       step = 0.02)
+    ),
+    #column(4,
+    #       sliderInput(inputId = "E_slider",
+    #                   label = "Frequency of Fire $(F)$",
+    #                   value = 0.09, 
+    #                   min = 0.04, max = 0.94,
+    #                   step = 0.05)
+    #),
+    column(4,
+           sliderInput(inputId = "A0_slider",
+                       label = "Initial Tree Density $(T_0)$",
+                       value = 0.02, 
+                       min = 0.02, max = 0.98,
+                       step = 0.02)
+    ),
+    column(4,
+           sliderInput(inputId = "time_slider",
+                       label = "Number of Years",
+                       value = 100, 
+                       min = 50, max = 500,
+                       step = 50)
+    )
+  ),
+  
+  # Middle and bottom rows replaced with cards in a responsive grid
+  layout_columns(height="600px",
+    card(
+      #card_header("Model schematic & Equation"),
+      plotOutput("plot_schematic"),
+      uiOutput("dynamEq"),
+      card_style = "width: 3000;"
+    ),
+    card(
+      #card_header("Species Frequencies Over Time"),
+      plotOutput("plot_species_time")
+    ),
+    card(
+      #card_header("T vs dT"),
+      plotOutput("plot_A_vs_dA")
+    ),
+    card(
+      #card_header("Fire over Time"),
+      plotOutput("plot_fire_time")
+    ),
+    col_widths = c(6, 6, 6, 6)  # Optional: adjust widths for layout balance
+  )
+)
+
+
+# Server logic
+server <- function(input, output) {
+  # fix the environmental frequency of fire 
+  # be careful to choose a value that does *NOT* result in neutral system
+  E <- 0.09
+  
+  ######################
+  # expressions
+  ######################
+  
+  # a reactive expression to define the parameters
+  curr_params <- reactive(c(epsilon = E,
+                            mu_A = input$muA_slider))
+  
+  # a reactive expression to get dA as a function of tree frequency (A)
+  dA_df <- reactive(get_dA_by_A(params = curr_params()))
+  
+  # a reactive expression to get the long-term model outcome
+  outcome <- reactive(get_steady_state(params = curr_params(),
+                              dA.df = dA_df()))
+  
+  # a reactive expression to simulate evolution of the system over time
+  sims <- reactive(sim_forward_time(time = 0:input$time_slider,
+                                    init = c(A = input$A0_slider),
+                                    params = curr_params()))
+  
+  # a reactive expression to simulate fire frequency in the system over time
+  fires <- reactive(get_fire_time(params = curr_params(),
+                                  sim_df = sims()))
+  
+  ######################
+  # outputs
+  ######################
+  # typeset dynamic recursion equation
+  output$dynamEq <- renderUI({
+    temp_parameters <- curr_params()
+    muA <- unname(temp_parameters["mu_A"])
+    Ep <- unname(temp_parameters["epsilon"])
+    # first define the equation by colouring the dynamic variables with their appropriate colours
+    the_eqn <- paste0("$$\\small{ \\frac{\\delta T}{\\delta t} = \\overbrace{0.1 \\color{", colours_species["arbour"],
+                      "}{T(1-T)}}^{\\text{biomass growth}} - \\overbrace{%.02f \\color{", colours_species["arbour"],
+                      "}{T}\\underbrace{(%.02f + \\color{", substring(colours_species["grass"], first=1, last=7),
+                      "}{(1-T)})(1-\\color{", colours_species["arbour"],
+                      "}{T})}_{\\text{frequency of fire}}}^{\\text{loss of biomass due to fire}}}$$")
+    # then typeset the equation using MathJax
+    withMathJax(sprintf(the_eqn, muA, Ep))
+  })
+  # render model schematic:
+  output$plot_schematic <- renderPlot({plot_schematic(curr_params())})
+  # render Group Frequencies over Time plot
+  output$plot_species_time <- renderPlot({ggplot_t_finiteANDoutcome(sim_df = sims(),
+                                                                    steady_state = outcome())})
+  # render Fire Frequencies over Time plot
+  output$plot_fire_time <- renderPlot({ggplot_fire_finiteANDoutcome(params = curr_params(),
+                                                                    sim_df = sims(),
+                                                                    fire_df = fires(),
+                                                                    steady_state = outcome())})
+  # render T vs dT plot
+  output$plot_A_vs_dA <- renderPlot({plot_dA_by_A(dA.df = dA_df(),
+                                                  steady_state = outcome())})
+}
+
+# Complete app with UI and server components
+shinyApp(ui, server)
