@@ -162,11 +162,28 @@ get_steady_state <- function(params, dA.df){
 
 
 # Function to generate coordinates for just under 3/4 circle
-generate_circle <- function(center = c(0, 0), radius = 1, npoints = 50) {
-  theta <- seq(0.55 * pi, 2 * pi, length.out = npoints)
+generate_circle <- function(center = c(0, 0),
+                            radius = 1,
+                            start.end = c(0, 2), # in radians!
+                            npoints = 50) {
+  theta <- seq(start.end[1] * pi, start.end[2] * pi, length.out = npoints)
   x <- center[1] + radius * cos(theta)
   y <- center[2] + radius * sin(theta)
   data.frame(x = x, y = y)
+}
+
+# a function to resize circle data.frame by a factor of x in the y (left or right) direction
+resize_circle <- function(circle_df, resize, direction="right") {
+  if (direction == "right"){
+    x_start <- min(circle_df$x)
+    new_x <- resize * (circle_df$x - x_start) + x_start
+    return(data.frame(x=new_x, y=circle_df$y))
+    
+  } else if (direction == "left") {
+    x_start <- max(circle_df$x)
+    new_x <- resize * (circle_df$x - x_start) + x_start
+    return(data.frame(x=new_x, y=circle_df$y))
+  }
 }
 
 # plot the bottom layers of the schematic
@@ -178,12 +195,12 @@ plot_schem_static <- function(){
   thicc <- 0.7
   
   # define the width and height of the filled rectangles
-  rect_HALFwidth <- 1.2
-  rect_HALFheight <- 0.35
+  rect_HALFwidth <- 2.5
+  rect_HALFheight <- 0.6
   # define the width and height of the white rectangles
-  white_FIREwidth <- 0.55
-  white_CLIMATEwidth <- 1.12
-  white_HALFheight <- 0.25
+  white_FIREwidth <- 0.95
+  white_CLIMATEwidth <- 2
+  white_HALFheight <- 0.5
   
   # fire
   fire_emoji <- rasterGrob(readPNG("fire_emoji.png"), width = unit(1, "npc"), height = unit(1, "npc"))
@@ -191,8 +208,8 @@ plot_schem_static <- function(){
   # Create a data.frame to define the rectangles and text
   rect_coords <- data.frame(
     rect_fill = c(colours_species, rep("white", 2)),
-    x_center = c(1, 1, 4, 7), # 3 evenly spaced columns
-    y_center = c(4.5, 1, 2.75, 3.625) # fire in middle of trees & grass. Climate in middle of trees & fire.
+    x_center = c(1, 1, 6.8, 11.1), # 3 unevenly spaced columns
+    y_center = c(4.5, 1, 2.75, 4.6-rect_HALFheight) # fire in middle of trees & grass. Climate at bottom edge of trees.
   )
   # name the rows by the "compartments"
   row.names(rect_coords) = c("Trees", "Grasses", "Fire", "Climate")
@@ -204,7 +221,7 @@ plot_schem_static <- function(){
   
   # add a fire emoji on the bottom layer
   schematic <- ggplot() +
-                annotation_custom(fire_emoji, xmin = 3.7, xmax = 4.9, ymin = 2.35, ymax = 4.15)
+                annotation_custom(fire_emoji, xmin = 5.6, xmax = 8.05, ymin = 2, ymax = 5)
   
   # begin making the plot. Put the rectangles on the lowest layer
   schematic <- schematic +
@@ -216,13 +233,15 @@ plot_schem_static <- function(){
     # Add text labels
     geom_text(data = rect_coords,
               aes(x = x_center, y = y_center, label = row.names(rect_coords)), 
-              size = 8) +
+              size = 9) +
     
     # add circle arrow for trees --| trees
-    geom_arrow(data = generate_circle(center = c(rect_coords["Trees", "left"], rect_coords["Trees", "bottom"]-0.1),
-                                      radius = rect_HALFheight*1.15),
+    geom_arrow(data = generate_circle(center = c(rect_coords["Trees", "left"],
+                                                 rect_coords["Trees", "bottom"] - whitespace),
+                                      radius = rect_HALFheight*1,
+                                      start.end = c(0.55, 2.01)),
                aes(x=x, y=y),
-               arrow_head = arrow_head_line(angle = 90, lineend = "square"),
+               arrow_head = arrow_head_line(angle = 90),
                length_head = unit(4, "mm"),
                linewidth = thicc) +
     
@@ -230,14 +249,37 @@ plot_schem_static <- function(){
     geom_arrow(data = data.frame(x = c(rect_coords["Trees", "x_center"], rect_coords["Grasses", "x_center"]),
                                  y = c(rect_coords["Trees", "bottom"] - whitespace, rect_coords["Grasses", "top"] + whitespace)),
                aes(x=x, y=y),
-               arrow_head = arrow_head_line(angle = 90, lineend = "square"),
+               arrow_head = arrow_head_line(angle = 90),
                length_head = unit(4, "mm"),
+               linewidth = thicc) +
+    
+    # add circle arrow for grasses --> fire
+    geom_arrow(data = resize_circle(generate_circle(center = c(rect_coords["Grasses", "right"] + whitespace,
+                                                 rect_coords["Fire", "bottom"] - rect_HALFheight/4),
+                                      radius = 1.2,
+                                      start.end = c(1.5, 2.03)),
+                                    resize = 1.9,
+                                    direction = "right"),
+               aes(x=x, y=y),
+               arrow_head = arrow_head_wings(offset=45, inset=33),
+               length_head = unit(3, "mm"),
+               linewidth = thicc) +
+    
+    # add circle arrow for trees --| fire
+    geom_arrow(data = resize_circle(generate_circle(center = c(rect_coords["Grasses", "right"] + whitespace,
+                                                               rect_coords["Fire", "top"] + rect_HALFheight/4),
+                                                    radius = 1.2,
+                                                    start.end = c(0.5, 0.15)),
+                                    resize = 1.9,
+                                    direction = "right"),
+               aes(x=x, y=y),
+               arrow_head = arrow_head_line(angle = 90),
+               length_head = unit(3, "mm"),
                linewidth = thicc)
-              
   
   # finally set limits and theme
   schematic <- schematic +
-    scale_x_continuous(limits = c(min(rect_coords$left)-0.4, max(rect_coords$right))) +
+    scale_x_continuous(limits = c(min(rect_coords$left)-0.59, max(rect_coords$right))) +
     scale_y_continuous(limits = c(min(rect_coords$bottom), max(rect_coords$top))) +
     theme_void() +
     coord_fixed()
@@ -247,9 +289,38 @@ plot_schem_static <- function(){
 
 # add just the remaining arrows to the schematic
 plot_schem_arrows <- function(params){
-  # muA arrow
-  # epsilon arrow
-  geom_text(data = data.frame(x=0.1, y=0.7, val=paste0(params, collapse = "")), aes(x=x, y=y, label=val))
+  # rescale the parameter values
+  scaling_L <- params["mu_A"] * 16
+  scaling_F <- params["epsilon"] / (0.09*2)
+  
+  # epsilon arrow: straight arrow for climate --> fire
+  F_arrow <- geom_arrow(data = data.frame(x = c(11.1, # rect_coords["Climate", "x_center"]
+                                                7.95), # rect_coords["Fire", "right"] + whitespace
+                                          y = c(3.4, # rect_coords["Climate", "bottom"] - whitespace/2
+                                                2.75) # rect_coords["Fire", "y_center"]
+                                          ),
+                        aes(x=x, y=y),
+                        arrow_head = arrow_head_wings(offset=45, inset=33),
+                        length_head = unit(4 * scaling_F, "mm"),
+                        linewidth = 0.7 * scaling_F) # thicc * scaling_F
+  
+  # muA arrow: circle arrow for fire --| trees
+  L_arrow <- geom_arrow(data = resize_circle(
+                                generate_circle(
+                                  center = c(5.65, # rect_coords["Fire", "left"] - whitespace
+                                             3.9), # rect_coords["Trees", "bottom"] 
+                                  radius = 1.2,
+                                  start.end = c(1.5, 1.08)
+                                  ),
+                                resize = 1.9,
+                                direction = "left"),
+             aes(x=x, y=y),
+             arrow_head = arrow_head_line(angle = 90),
+             length_head = unit(4 * scaling_L, "mm"),
+             linewidth = 0.7 * scaling_L) # thicc * scaling_L
+  
+  return(list(F_arrow = F_arrow,
+              L_arrow = L_arrow))
 }
 
 # # a function to plot the community over finite time
@@ -289,7 +360,7 @@ ggplot_t_finite <- function(sim_df){
                   scale_x_continuous(limits = c(min(sim_df$time), max(sim_df$time)), expand = c(0, 0),
                                      breaks = labs_x,
                                      labels = labs_x) +
-                  labs(x="Time (years)", y="Density of each Group") +
+                  labs(x="Time (years)", y="Density") +
                   theme_bw() + 
                   theme(text = element_text(size=22),
                        axis.text=element_text(size=18),
@@ -328,7 +399,7 @@ ggplot_t_inf <- function(sim_df, steady_state){
   inf_plot <- ggplot() +
     geom_hline(data = inf_df, aes(yintercept = Value, color = Group),
                linewidth = 2.5) +
-    scale_x_continuous(limits=c(0.5, 1.5), breaks = c(1), labels = "outcome") +
+    scale_x_continuous(limits=c(0.5, 1.5), breaks = c(1), labels = "long-\nterm") +
     scale_colour_manual(values = colours_species,
                         labels = c("Trees", "Grasses")) +
     scale_y_continuous(limits = c(-0.01, 1.01), expand = c(0, 0)) +
@@ -465,15 +536,56 @@ plot_dA_by_A <- function(dA.df, steady_state){
   plot(x = dA.df$A, y = dA.df$dA,
        pch = 16,
        col = colour_dA, 
-       ylab = expression("Change in tree density (" * delta * "T)"),
+       ylab = expression("Change in Trees (" * delta * "T)"),
        xlab = "Tree density (T)",
        ylim = limits_y,
-       xlim = c(-0.01, 1.01), xaxs = "i",
-       xaxt = "n"  # Suppress default x-axis tick labels
+       xlim = c(-0.01, 1.01), xaxs = "i", # set a fixed padding for x axis
+       xaxt = "n", yaxt = "n"  # Suppress default tick labels for both x and y axes
   )
   
   # Add custom x-axis tick labels
   axis(1, at = seq(from=0, to=1, by=0.25), labels = c("0", "", "0.5", "", "1"))
+  
+  # custom y-axis tick labels
+    # find which side of plot is furthest from 0
+  if (which.max(abs(range(dA.df$dA))) == 1){ # bottom side furthest from 0
+    # add tick label on bottom and at 0
+    axis(2, at = c(min(dA.df$dA), 0),
+         labels = signif(c(min(dA.df$dA), 0), digits = 1))
+    
+    # top side furthest from 0
+  } else { 
+    # add tick label at 0 and top
+    axis(2, at = c(0, max(dA.df$dA)),
+         labels = signif(c(0, max(dA.df$dA)), digits = 1))
+  }
+    
+  
+  # if (steady_state$outcome == "A=1"){
+  #   #if (...) {
+  #   #  
+  #   #} else {
+  #     axis(2, at = c(0, max(dA.df$dA)),
+  #          labels = signif(c(0, max(dA.df$dA)), digits = 1))
+  #   #}
+  # } else {
+  #   axis(2, at = c(min(dA.df$dA), 0),
+  #        labels = signif(c(min(dA.df$dA), 0), digits = 1))
+  # }
+  
+  
+  
+  # if(steady_state$outcome == "bistable"){
+  #   axis(2, at = c(min(dA.df$dA), 0, max(dA.df$dA)),
+  #        labels = signif(c(min(dA.df$dA), 0, max(dA.df$dA)), digits = 1))
+  # } else if (steady_state$outcome == "A=1"){
+  #   axis(2, at = c(0, max(dA.df$dA)),
+  #        labels = signif(c(0, max(dA.df$dA)), digits = 1))
+  # } else {
+  #   axis(2, at = c(min(dA.df$dA), 0),
+  #        labels = signif(c(min(dA.df$dA), 0), digits = 1))
+  # }
+  
   # Add a dotted vertical line at y = 0
   abline(h = 0, lty = 3, lwd = 0.6, col = "black")
   
@@ -541,6 +653,9 @@ ggplot_fire_finite <- function(params, fire.df, ylims){
   tickwidth_x <- floor(max(fire.df$time)/4)
   labs_x <- seq(from=tickwidth_x, to=3*tickwidth_x, by=tickwidth_x)
   
+  # get y-axis labels
+  ticks_y <- seq(from = ylims[1], to = signif(ylims[2], digits = 2), length.out = 5)
+  
   # create the plot
   finit_plot <- ggplot(fire.df,
                        aes(x = time, y = fire, linewidth = 2.5, colour=colour_fire)) +
@@ -548,8 +663,10 @@ ggplot_fire_finite <- function(params, fire.df, ylims){
     scale_x_continuous(limits = c(min(fire.df$time), max(fire.df$time)), expand = c(0, 0),
                        breaks = labs_x,
                        labels = labs_x) +
-    scale_y_continuous(limits = ylims + c(-0.01, 0.01), expand = c(0, 0)) +
-    labs(x="Time (years)", y="Frequency of Fire") +
+    scale_y_continuous(limits = ylims + c(-0.01, 0.01), expand = c(0, 0),
+                       breaks = ticks_y,
+                       labels = c(ticks_y[1], "", ticks_y[3], "", ticks_y[5])) +
+    labs(x="Time (years)", y="Fire Frequency") +
     theme_bw() + 
     theme(text = element_text(size=22),
           axis.text=element_text(size=18),
@@ -583,7 +700,7 @@ ggplot_fire_inf <- function(params, sim_df, fire_df, steady_state, ylims){
   inf_plot <- ggplot() +
     geom_hline(data = inf_df, aes(yintercept = Value, color = colour_fire),
                linewidth = 2.5) +
-    scale_x_continuous(limits=c(0.5, 1.5), breaks = c(1), labels = "outcome") +
+    scale_x_continuous(limits=c(0.5, 1.5), breaks = c(1), labels = "long-\nterm") +
     scale_y_continuous(limits = ylims + c(-0.01, 0.01), expand = c(0, 0)) +
     labs(x="") +
     theme_bw() + theme(text = element_text(size=22),

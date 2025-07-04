@@ -78,7 +78,7 @@ ui <- fluidPage(
   fluidRow(
     column(4,
            sliderInput(inputId = "muA_slider",
-                       label = "Fraction of Trees Lost per fire $(L)$",
+                       label = "Trees Lost per fire $(L)$",
                        value = 0.03, 
                        min = 0.01, max = 0.19,
                        step = 0.02)
@@ -99,27 +99,25 @@ ui <- fluidPage(
     )
   ),
   
-  # Middle and bottom rows replaced with cards in a responsive grid
-  layout_columns(height="600px",
+  # Middle and bottom rows replaced laid out as cards on a responsive grid
+  layout_columns(height="600px", 
+    card( card_header("1. Model schematic & Equation"),
+          plotOutput("plot_schematic", height = "197px"),
+          uiOutput("dynamEq")
+         ),
     card(
-      #card_header("Model schematic & Equation"),
-      plotOutput("plot_schematic", height = "298px"),
-      uiOutput("dynamEq"),
-      card_style = "width: 3000;"
-    ),
-    card(
-      #card_header("Species Frequencies Over Time"),
+      card_header("3. Tree & Grass density over Time"),
       plotOutput("plot_species_time")
     ),
     card(
-      #card_header("T vs dT"),
+      card_header("2. Change in Tree density"),
       plotOutput("plot_A_vs_dA")
     ),
     card(
-      #card_header("Fire over Time"),
+      card_header("4. Fire frequency over Time"),
       plotOutput("plot_fire_time")
     ),
-    col_widths = c(6, 6, 6, 6)  # Optional: adjust widths for layout balance
+    col_widths = c(7, 5, 7, 5)  # Optional: adjust widths for layout balance
   )
 )
 
@@ -155,6 +153,9 @@ server <- function(input, output) {
   fires <- reactive(get_fire_time(params = curr_params(),
                                   sim_df = sims()))
   
+  # reactive arrows for the schematic
+  LF_arrows <- reactive(plot_schem_arrows(params = curr_params()))
+  
   ######################
   # outputs
   ######################
@@ -173,7 +174,7 @@ server <- function(input, output) {
     withMathJax(sprintf(the_eqn, muA, Ep))
   })
   # render model schematic:
-  output$plot_schematic <- renderPlot({static_schematic + plot_schem_arrows(curr_params())})
+  output$plot_schematic <- renderPlot({static_schematic + LF_arrows()})
   # render Group Frequencies over Time plot
   output$plot_species_time <- renderPlot({ggplot_t_finiteANDoutcome(sim_df = sims(),
                                                                     steady_state = outcome())})
