@@ -11,10 +11,10 @@ library(bslib) # for most recent recommended UI options
 library(thematic) # for converting R plots to have consistent theme as from bslib
 
 # set the theme for bslib objects
-app_theme <- bs_theme(bootswatch = "simplex", # set simplex theme
+app_theme <- bs_theme(bootswatch = "minty", # set simplex theme
                       version = 5,
-                      primary = colour_dA, # set the primary: this matches colour used for dA
-                      secondary = colours_species["arbour"]) # secondary colour matches trees 
+                      primary = substring(colours_species["arbour"], first=1, last=7), # set the primary: this matches colour used for trees
+                      secondary = colour_fire) # secondary colour used for fire
 
 ###################################
 # define the app
@@ -79,14 +79,14 @@ ui <- fluidPage(
     column(4,
            sliderInput(inputId = "muA_slider",
                        label = "Trees Lost per fire $(L)$",
-                       value = 0.03, 
+                       value = 0.07, 
                        min = 0.01, max = 0.19,
                        step = 0.02)
     ),
     column(4,
            sliderInput(inputId = "A0_slider",
                        label = "Initial Tree Density $(T_0)$",
-                       value = 0.02, 
+                       value = 0.08, 
                        min = 0.02, max = 0.98,
                        step = 0.02)
     ),

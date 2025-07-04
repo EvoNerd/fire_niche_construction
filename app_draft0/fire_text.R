@@ -4,13 +4,13 @@
 #date: 2025-07-01
 
 # use the same colours as used for the bslib theme
-html_col1 <- sprintf("<span style='color: %s;'>", colour_dA)
-html_col2 <- sprintf("<span style='color: %s;'>", colours_species["arbour"])
+html_col1 <- sprintf("<span style='color: %s;'>", colours_species["arbour"])
+html_col2 <- sprintf("<span style='color: %s;'>", colour_fire)
 html_col3 <- sprintf("<span style='color: %s;'>", substring(colours_species["grass"], first=1, last=7))
 
 
 # subtitle text (appears underneath the app title)
-text_subtitle <- paste0(html_col1, "When the fraction of trees lost per fire is sufficiently high, this creates a system with two attractors where the final outcome depends on the initial tree density.</span>")
+text_subtitle <- paste0(html_col1, "When the fraction of trees lost per fire is sufficiently high, this creates a system with two attractors where the long-term outcome depends on the initial tree density.</span>")
 
 
 
@@ -20,10 +20,10 @@ text_intro <- paste0("Imagine two vegetation groups with different responses to 
 
 In a climate with frequent fires (once per decade, fire frequency: $F = 0.09$), you might expect that grasses will always dominate. But this changes when we consider the functional traits of the ecosystem members:
 
-- ",html_col2,"**Trees:**</span> grow slowly (max. 0.1 biomass increase per year) and limit their own growth by $1 - \\text{tree density}$. Their biomass *decreases* the frequency of fires by $F(1 - \\text{tree density})$. 
+- ",html_col1,"**Trees:**</span> grow slowly (max. 0.1 biomass increase per year) and limit their own growth by $(1 - \\text{tree density})$. Their biomass *decreases* the frequency of fires by $F(1 - \\text{tree density})$. 
 <br>The **fraction of trees lost per fire ($L$)** depends on a slider-controlled value.
 
-- ",html_col3,"**Grasses:**</span> grow quickly to fill up any available space ($\\text{grass density}=1-\\text{tree density}$). Their biomass is flammable and *increases* the frequency of fires by $F + \\text{grass density}$.
+- ",html_col3,"**Grasses:**</span> grow quickly to fill up any available space $(\\text{grass density}=1-\\text{tree density})$. Their biomass is flammable and *increases* the frequency of fires by $F + \\text{grass density}$.
 
 Here you will explore how the fraction of trees lost per fire event determines whether grasses will dominate, or not.
 
@@ -69,9 +69,9 @@ text_huh <- paste0("A key equation (middle left) shows how the tree density, $T$
 <br>Coloured diamonds show the stable equilbrium points or **\"attractors\"**. These determine the long-term outcome of the ecosystem.
 
 - **Top right:** Tree density $T$ over Time.
-<br>Shows how the tree density increases, or decreases, each year. The right side shows the stable **outcome** after many years.
+<br>Shows how the tree density increases, or decreases, each year. The right side shows the long-term **outcome** after many years.
 
-*",html_col2,"Play with the sliders to explore how the fraction of trees lost per fire ($L$) and initial conditions ($T_0$) shape the outcome.</span>
+*",html_col2,"Play with the sliders to explore how the fraction of trees lost per fire ($L$) and initial conditions ($T_0$) shape the long-term outcome.</span>
 <br>Can trees dominate if they are initially rare? When does this happen?*")
 
 
@@ -94,7 +94,7 @@ text_try <- paste0("- ",html_col2,"Set $L$ near 0.05:</span> trees always take o
 - ",html_col2,"Set $L$ above 0.09:</span> trees can spread only when they start from a sufficiently common initial density $T_0$.
 <br>This is a system with two attractors.
 
-- ",html_col2,"Vary the initial tree density ($T_0$):</span> *How does the starting point change the outcome?*")
+- ",html_col2,"Vary the initial tree density ($T_0$):</span> *How does the starting point change the long-term outcome?*")
 
 
 
@@ -125,4 +125,4 @@ text_summary <- "Even if grasses increase the frequency of fires, they might not
 
 - How common trees are to start with ($T_0$).
 
-When the fraction of trees lost per fire is sufficiently high, ecological feedback creates a system with two attractors where the final outcome depends on the initial tree density."
+When the fraction of trees lost per fire is sufficiently high, ecological feedback creates a system with two attractors where the long-term outcome depends on the initial tree density."
