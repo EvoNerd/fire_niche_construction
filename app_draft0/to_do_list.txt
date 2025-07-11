@@ -1,0 +1,1 @@
+- add letters next to the L and F variables in the schematic

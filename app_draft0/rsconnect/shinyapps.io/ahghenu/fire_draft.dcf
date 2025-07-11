@@ -1,0 +1,12 @@
+name: fire_draft
+title: fire_draft
+username: ahghenu
+account: ahghenu
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 15033711
+bundleId: 10566376
+url: https://ahghenu.shinyapps.io/fire_draft/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

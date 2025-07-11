@@ -3,7 +3,6 @@
 #author: Ana-Hermina Ghenu
 #date: 2025-07-01
 
-library(tidyverse) # for pipe syntax
 library(deSolve)   # for solving ordinary differential equations
 library(ggplot2)   # for plotting the time series
 library(patchwork) # for combining ggplots in the time series
@@ -323,26 +322,6 @@ plot_schem_arrows <- function(params){
               L_arrow = L_arrow))
 }
 
-# # a function to plot the community over finite time
-# plot_t_finite <- function(sim_df){
-#   # Set up an empty plot
-#   plot(sim_df$time, sim_df$arbour,
-#        type = "n",
-#        ylim = c(-0.01, 1.01), yaxs = "i", # remove y-axis padding
-#        xlab = "Time (years)",
-#        ylab = "Species density",
-#        yaxt = "n"  # Suppress default y-axis tick labels
-#   )
-#   
-#   # Add custom y-axis tick labels
-#   axis(2, at = seq(from=0, to=1, by=0.25), labels = c("0", "", "0.5", "", "1"))
-#   
-#   # Add lines for each species
-#   lines(sim_df$time, sim_df$arbour, col = colours_species["arbour"], lwd = 7)
-#   lines(sim_df$time, sim_df$grass, col = colours_species["grass"], lwd = 7)
-#   
-# }
-
 # a GGPLOT function to plot the community over finite time
 ggplot_t_finite <- function(sim_df){
   # get x-axis labels
@@ -425,61 +404,6 @@ ggplot_t_finiteANDoutcome <- function(sim_df, steady_state)
              ncol = 2, widths = c(3,1))
 
 
-# # a function to plot the outcome of the community after infinite time
-# plot_t_inf <- function(sim_df, steady_state){
-#   # set up an empty plot
-#   plot(x=1, y=1,
-#        type = "n",
-#        xlim = c(-1,1),
-#        ylim = c(-0.01, 1.01), yaxs = "i", # remove y-axis padding
-#        xlab = "", ylab = "",
-#        xaxt="n", yaxt = "n"  # Suppress default axis tick labels
-#   )
-#   
-#   # Add a custom x-axis tick label
-#   axis(1, at = 0, labels = "outcome")
-#   
-#   # if the system has 2 attractors
-#   if (steady_state$outcome == "bistable"){
-#     # we need to check the initial conditions as compared to the unstable equilibrium point
-#     index_stable_pt <- ifelse(sim_df$arbour[1] < steady_state$unstable_pt,
-#                               1, 2)
-#     # plot the lines for the appropriate stable point
-#     abline(h = steady_state$stable_pts[index_stable_pt], lwd = 7, col = colours_species["arbour"])
-#     abline(h = 1 - steady_state$stable_pts[index_stable_pt], lwd = 7, col = colours_species["grass"])
-#     
-#   } else { # if the system has only 1 attractor
-#     # we can add the lines directly from the steady state
-#     abline(h = steady_state$stable_pts, lwd = 7, col = colours_species["arbour"])
-#     abline(h = 1 - steady_state$stable_pts, lwd = 7, col = colours_species["grass"])
-#   }
-#   
-# }
-# 
-# # a function to combine the finite and infinite time plots
-# plot_t_finiteANDoutcome <- function(sim_df, steady_state){
-#   
-#   # define a new plotting area
-#   par(cex=0.7,
-#       cex.lab = 2, # increase size of axis labels
-#       cex.axis = 1.5, # increase size of tick mark labels 
-#       mar = c(3.9, 4.4, 1, 0.1), # decrease the borders
-#       fig=c(0,0.8,0,1)) # next plot will appear on the left side (80% width and 100% height)
-#   plot_t_finite(sim_df)
-#   # add a plot on top of the existing one & define area where to print it
-#   par(new=TRUE,
-#       mar = c(3.9, 0.1, 1, 0.1), # decrease the borders
-#       fig=c(0.81, 1, 0, 1)) # next plot will appear on right side (19% width and 100% height)
-#   plot_t_inf(sim_df, steady_state)
-#   
-#   # record the plot as a variable
-#   the.plot <- recordPlot()
-#   # reset the device
-#   dev.off()
-#   
-#   return(the.plot)
-# }
-
 # a function to plot dA as a function of A
 plot_dA_by_A <- function(dA.df, steady_state){
   # change the graphing settings
@@ -560,32 +484,6 @@ plot_dA_by_A <- function(dA.df, steady_state){
          labels = signif(c(0, max(dA.df$dA)), digits = 1))
   }
     
-  
-  # if (steady_state$outcome == "A=1"){
-  #   #if (...) {
-  #   #  
-  #   #} else {
-  #     axis(2, at = c(0, max(dA.df$dA)),
-  #          labels = signif(c(0, max(dA.df$dA)), digits = 1))
-  #   #}
-  # } else {
-  #   axis(2, at = c(min(dA.df$dA), 0),
-  #        labels = signif(c(min(dA.df$dA), 0), digits = 1))
-  # }
-  
-  
-  
-  # if(steady_state$outcome == "bistable"){
-  #   axis(2, at = c(min(dA.df$dA), 0, max(dA.df$dA)),
-  #        labels = signif(c(min(dA.df$dA), 0, max(dA.df$dA)), digits = 1))
-  # } else if (steady_state$outcome == "A=1"){
-  #   axis(2, at = c(0, max(dA.df$dA)),
-  #        labels = signif(c(0, max(dA.df$dA)), digits = 1))
-  # } else {
-  #   axis(2, at = c(min(dA.df$dA), 0),
-  #        labels = signif(c(min(dA.df$dA), 0), digits = 1))
-  # }
-  
   # Add a dotted vertical line at y = 0
   abline(h = 0, lty = 3, lwd = 0.6, col = "black")
   
@@ -658,8 +556,8 @@ ggplot_fire_finite <- function(params, fire.df, ylims){
   
   # create the plot
   finit_plot <- ggplot(fire.df,
-                       aes(x = time, y = fire, linewidth = 2.5, colour=colour_fire)) +
-    geom_line() +
+                       aes(x = time, y = fire, linewidth = 2.5)) +
+    geom_line(colour = colour_fire) +
     scale_x_continuous(limits = c(min(fire.df$time), max(fire.df$time)), expand = c(0, 0),
                        breaks = labs_x,
                        labels = labs_x) +
@@ -698,7 +596,7 @@ ggplot_fire_inf <- function(params, sim_df, fire_df, steady_state, ylims){
   }
   # create the plot
   inf_plot <- ggplot() +
-    geom_hline(data = inf_df, aes(yintercept = Value, color = colour_fire),
+    geom_hline(data = inf_df, aes(yintercept = Value), color = colour_fire,
                linewidth = 2.5) +
     scale_x_continuous(limits=c(0.5, 1.5), breaks = c(1), labels = "long-\nterm") +
     scale_y_continuous(limits = ylims + c(-0.01, 0.01), expand = c(0, 0)) +

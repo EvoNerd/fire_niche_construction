@@ -107,7 +107,7 @@ We can also code it using the R programming language like this:
 # ordinary differential equation: a function to get the rate of change over time
 ODE <- function(time, init, params){
   # pass the variables as a list
-  with (as.list(c(time, init, params)), {
+  with (as.list(c(init, params)), {
     # define the differential equation:
     dT_dt = 0.1*T*(1-T) - L*T*(F + (1-T))*(1-T)
     return(list(dT = dT_dt))
