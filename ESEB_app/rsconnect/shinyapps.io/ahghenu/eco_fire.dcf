@@ -5,7 +5,7 @@ account: ahghenu
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 15191798
-bundleId: 10760669
+bundleId: 10760728
 url: https://ahghenu.shinyapps.io/eco_fire/
 version: 1
 asMultiple: FALSE

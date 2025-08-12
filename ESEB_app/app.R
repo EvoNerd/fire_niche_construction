@@ -48,7 +48,10 @@ ui <- fluidPage(
             });
             </script >
             ")),
-
+  
+  # for ESEB conference:
+  markdown("# Interested in participating in our study? contact ana-hermina.ghenu@unibe.ch"),
+  
   # Title
   titlePanel("Ecosystem restructuring by fire"),
   
