@@ -20,6 +20,7 @@ app_theme <- bs_theme(bootswatch = "minty", # set simplex theme
 # define the app
 ###################################
 
+
 # call thematic before launching the shiny
   # this will integrate the theme from bslib to how the plots are displayed
 thematic_shiny(font = font_spec("auto", scale = 1.53))
@@ -100,24 +101,25 @@ ui <- fluidPage(
   ),
   
   # Middle and bottom rows replaced laid out as cards on a responsive grid
-  layout_columns(height="600px", 
-    card( card_header("1. Model schematic & Equation"),
-          plotOutput("plot_schematic", height = "197px"),
-          uiOutput("dynamEq")
-         ),
+  layout_columns(height=580, 
+    card(card_header("1. Model schematic & Equation"),
+         card_body(class = "align-items-center",
+                   imageOutput("plot_schematic", height = 100, width="75%")),
+         card_body(uiOutput("dynamEq"), height=100, fill=FALSE)
+    ),
     card(
-      card_header("3. Tree & Grass density over Time"),
-      plotOutput("plot_species_time")
+      card_header("3. Fire frequency over Time"),
+      plotOutput("plot_fire_time")
     ),
     card(
       card_header("2. Change in Tree density"),
       plotOutput("plot_A_vs_dA")
     ),
     card(
-      card_header("4. Fire frequency over Time"),
-      plotOutput("plot_fire_time")
+      card_header("4. Tree & Grass density over Time"),
+      plotOutput("plot_species_time")
     ),
-    col_widths = c(7, 5, 7, 5)  # Optional: adjust widths for layout balance
+    col_widths = c(7, 5, 7, 5)  # left column is wider than right column
   )
 )
 
@@ -127,6 +129,7 @@ server <- function(input, output) {
   # fix the environmental frequency of fire 
   # be careful to choose a value that does *NOT* result in neutral system
   E <- 0.09
+  #E <- 0.55 # increase climatic rate of fire for the test question
   static_schematic <- plot_schem_static()
   
   ######################
@@ -159,22 +162,44 @@ server <- function(input, output) {
   ######################
   # outputs
   ######################
-  # typeset dynamic recursion equation
+  # typeset dynamic differential equation
   output$dynamEq <- renderUI({
     temp_parameters <- curr_params()
     muA <- unname(temp_parameters["mu_A"])
     Ep <- unname(temp_parameters["epsilon"])
+    
     # first define the equation by colouring the dynamic variables with their appropriate colours
     the_eqn <- paste0("$$\\small{ \\frac{\\delta T}{\\delta t} = \\overbrace{0.1 \\color{", colours_species["arbour"],
-                      "}{T(1-T)}}^{\\text{biomass growth}} - \\overbrace{%.02f \\color{", colours_species["arbour"],
+                      "}{T(1-T)}}^{\\text{biomass growth}} - \\overbrace{ \\color{", colour_fire,
+                      "}{%.02f} \\color{", colours_species["arbour"],
                       "}{T}\\underbrace{(%.02f + \\color{", substring(colours_species["grass"], first=1, last=7),
                       "}{(1-T)})(1-\\color{", colours_species["arbour"],
                       "}{T})}_{\\text{frequency of fire}}}^{\\text{loss of biomass due to fire}}}$$")
+    
+    # # here's another version of the equation with the Ep parameter coloured in red
+    # the_eqn <- paste0("$$\\small{ \\frac{\\delta T}{\\delta t} = \\overbrace{0.1 \\color{", colours_species["arbour"],
+    #                   "}{T(1-T)}}^{\\text{biomass growth}} - \\overbrace{ %.02f \\color{", colours_species["arbour"],
+    #                   "}{T}\\underbrace{( \\color{", colour_fire,
+    #                   "}{%.02f} + \\color{", substring(colours_species["grass"], first=1, last=7),
+    #                   "}{(1-T)})(1-\\color{", colours_species["arbour"],
+    #                   "}{T})}_{\\text{frequency of fire}}}^{\\text{loss of biomass due to fire}}}$$")
+    
     # then typeset the equation using MathJax
     withMathJax(sprintf(the_eqn, muA, Ep))
   })
-  # render model schematic:
-  output$plot_schematic <- renderPlot({static_schematic + LF_arrows()})
+  # render model schematic natively:
+    # THIS WAS REMOVED FOR APP DEPLOYMENT bc it varies with participant window size
+  #output$plot_schematic <- renderPlot({static_schematic + LF_arrows()})
+  # render model schematic from saved png file
+  output$plot_schematic <- renderImage({
+    list(
+      src = file.path("model_schematics",
+                      paste0("schemL-", substring(as.character(input$muA_slider), 3, 4), ".png")),
+      contentType = "image/png",
+      height = 100,
+      width = 364
+    )
+  }, deleteFile = FALSE)
   # render Group Frequencies over Time plot
   output$plot_species_time <- renderPlot({ggplot_t_finiteANDoutcome(sim_df = sims(),
                                                                     steady_state = outcome())})

@@ -41,14 +41,14 @@ Adjust how susceptible tree biomass is to fire damage.
 
 - $L > 0.092$: a lot of tree biomass is lost. **This is a system with two attractors.**
 
-*",html_col2,"Try sliding $L$ to see how the fire-susceptibility of trees changes the frequency of fires (top left).</span>
+*",html_col2,"Try sliding $L$ to see how the fire-susceptibility of trees changes the schematic and equation (1. top left).</span>
 <br>What other plots or equations change with $L$?*
 
 #### Slider 2. Initial tree density ($T_0$)
 
 Adjust the initial fraction of tree biomass $T_0$ at the start of the simulation.
 
-*",html_col2,"Try sliding $T_0$ to see how the tree density changes over time (top right).</span>
+*",html_col2,"Try sliding $T_0$ to see how the tree density changes over time (4. bottom right).</span>
 <br>Do any other plots change with $T_0$?*
 
 #### Slider 3. Number of years
@@ -61,14 +61,14 @@ Adjust the number of years to simulate over time.
 
 
 # What's going on?
-text_huh <- paste0("A key equation (middle left) shows how the tree density, $T$, changes over time.
+text_huh <- paste0("A key equation (1. middle left) shows how the tree density, $T$, changes over time.
 <br>We also visualize this in two plots:
 
-- **Bottom left:** Rate of change of tree density ($\\delta T$) as a function of current tree density ($T$).
+- **2. Bottom left:** Rate of change of tree density ($\\delta T$) as a function of current tree density ($T$).
 <br>Shows in which direction (arrow) and how fast (y-axis) the tree density is changing.
 <br>Coloured diamonds show the stable equilbrium points or **\"attractors\"**. These determine the long-term outcome of the ecosystem.
 
-- **Top right:** Tree density $T$ over Time.
+- **4. Bottom right:** Tree density $T$ over Time.
 <br>Shows how the tree density increases, or decreases, each year. The right side shows the long-term **outcome** after many years.
 
 *",html_col2,"Play with the sliders to explore how the fraction of trees lost per fire ($L$) and initial conditions ($T_0$) shape the long-term outcome.</span>
@@ -78,9 +78,9 @@ text_huh <- paste0("A key equation (middle left) shows how the tree density, $T$
 
 
 # Fire feedback
-text_feedback <- paste0("There is an ecological feedback between the density of trees and the frequency of fires (top left plot). Fires occur rarely when tree density is high, but often when tree density is low.
+text_feedback <- paste0("There is an ecological feedback between the density of trees and the frequency of fires (1. top left plot). Fires occur rarely when tree density is high, but often when tree density is low.
 
-The equation (middle left) and the bottom right plot show the frequency of fires as a function of tree density.
+The equation (1. middle left) shows the frequency of fires as a function of tree density. You can visualize it by sliding initial tree density ($T_0$) and seeing how the initial fire frequency at time 0 changes in plot 3 (top right).
 
 ",html_col2,"**Key insight:**</span> When trees are rare ($T$ is small), grasses and fires are common. Rare trees can only increase in density if few are lost per fire!")
 

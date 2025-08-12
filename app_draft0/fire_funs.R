@@ -274,14 +274,26 @@ plot_schem_static <- function(){
                aes(x=x, y=y),
                arrow_head = arrow_head_line(angle = 90),
                length_head = unit(3, "mm"),
-               linewidth = thicc)
+               linewidth = thicc) +
+    
+    # Add a text label for the L variable
+    annotate(
+      "text", label = list('italic("L")'), parse = TRUE,
+      x = 4.1, y = 2.5, size = 8, colour = colour_fire
+    ) # +
+    
+    # # Add a text label for the F variable
+    # annotate(
+    #   "text", label = list('italic("F")'), parse = TRUE,
+    #   x = 10, y = 2.5, size = 8, colour = colour_fire
+    # )
   
   # finally set limits and theme
   schematic <- schematic +
-    scale_x_continuous(limits = c(min(rect_coords$left)-0.59, max(rect_coords$right))) +
-    scale_y_continuous(limits = c(min(rect_coords$bottom), max(rect_coords$top))) +
-    theme_void() +
-    coord_fixed()
+               scale_x_continuous(limits = c(min(rect_coords$left)-0.59, max(rect_coords$right))) +
+               scale_y_continuous(limits = c(min(rect_coords$bottom), max(rect_coords$top))) +
+               theme_void() +
+               coord_fixed()
   
   return(schematic)
 }
@@ -290,7 +302,7 @@ plot_schem_static <- function(){
 plot_schem_arrows <- function(params){
   # rescale the parameter values
   scaling_L <- params["mu_A"] * 16
-  scaling_F <- params["epsilon"] / (0.09*2)
+  scaling_F <- params["epsilon"] / (0.09)
   
   # epsilon arrow: straight arrow for climate --> fire
   F_arrow <- geom_arrow(data = data.frame(x = c(11.1, # rect_coords["Climate", "x_center"]
@@ -300,7 +312,7 @@ plot_schem_arrows <- function(params){
                                           ),
                         aes(x=x, y=y),
                         arrow_head = arrow_head_wings(offset=45, inset=33),
-                        length_head = unit(4 * scaling_F, "mm"),
+                        length_head = unit(2 + scaling_F, "mm"),
                         linewidth = 0.7 * scaling_F) # thicc * scaling_F
   
   # muA arrow: circle arrow for fire --| trees
