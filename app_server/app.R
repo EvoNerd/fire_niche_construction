@@ -6,6 +6,11 @@
 # load the environment
 source("fire_funs.R")
 source("fire_text.R")
+
+# I'm getting an error message "unable to open connection to X11 display"
+#library(Cairo) # this should fix it but it seems that Cairo isn't installed on the server
+#options(bitmapType = "cairo") # set headless graphics device
+
 library(shiny) # for app
 library(bslib) # for most recent recommended UI options
 library(thematic) # for converting R plots to have consistent theme as from bslib
@@ -23,7 +28,7 @@ app_theme <- bs_theme(bootswatch = "minty", # set simplex theme
 
 # call thematic before launching the shiny
   # this will integrate the theme from bslib to how the plots are displayed
-thematic_shiny(font = font_spec("auto", scale = 1.53))
+thematic_shiny(font = font_spec("auto"))
 
 # user interface
 ui <- fluidPage(
@@ -38,6 +43,24 @@ ui <- fluidPage(
       }
     "))
   ),
+  # reduce the font size of slider controls
+  tags$style(HTML("
+    .control-label {
+      font-size: 14px;
+    }
+  ")),
+  # I tried to reduce the size of the slider but I don't think it does anything
+  tags$style(HTML("
+    .js-range-slider {
+      height: 0px !important;
+    }
+  ")),
+  # reduce the font size of card headers
+  tags$style(HTML("
+    .card-header {
+      font-size: 14px;
+    }
+  ")),
   
   # typeset math using latex code
   withMathJax(),
@@ -49,14 +72,7 @@ ui <- fluidPage(
             </script >
             ")),
   
-  # for ESEB conference:
-  markdown("# Interested in participating in our study? contact ana-hermina.ghenu@unibe.ch"),
-  
-  # Title
-  titlePanel("Ecosystem restructuring by fire"),
-  
-  # a subtitle / summary can be added here:
-  markdown(text_subtitle),
+  HTML("<br>"),
   
   navset_card_pill(# use pill-shaped buttons to navigate
     # explain what the tabs on this card do
@@ -92,8 +108,7 @@ ui <- fluidPage(
                        label = "Initial Tree Density $(T_0)$",
                        value = 0.1, 
                        min = 0.02, max = 0.98,
-                       step=0.01)
-                       #step = 0.08)
+                       step = 0.08)
     ),
     column(4,
            sliderInput(inputId = "time_slider",
@@ -106,27 +121,28 @@ ui <- fluidPage(
   
   # Middle and bottom rows replaced laid out as cards on a responsive grid
   layout_columns(#NOTE that the sm setting of breakpoints makes it difficult to set the total height of 2-column layout here
+                 gap = "0rem", # removes the whitespace between cards
     card(
       card_header("1. Model schematic & Equation"),
-      card_body(imageOutput("plot_schematic", height = 100, width="75%"),
-                uiOutput("dynamEq", height=100),
-      height="235px",
+      card_body(#imageOutput("plot_schematic", height = 55, width="75%"),
+                uiOutput("dynamEq", height = 30),
+      height="160px",
       class = "align-items-center")
     ),
     card(
       card_header("3. Fire frequency over Time"),
       plotOutput("plot_fire_time"),
-      height="285px"
+      height="200px"
     ),
     card(
       card_header("2. Change in Tree density"),
-      plotOutput("plot_A_vs_dA"),
-      height="265px"
+      #plotOutput("plot_A_vs_dA"),
+      height="200px"
     ),
     card(
       card_header("4. Tree & Grass density over Time"),
-      plotOutput("plot_species_time"),
-      height="250px"
+      #plotOutput("plot_species_time"),
+      height="200px"
     ),
     col_widths = breakpoints(
       sm = rep(12, times = 4), # for portrait-mode phones, display in a single column
@@ -143,7 +159,6 @@ server <- function(input, output) {
   # be careful to choose a value that does *NOT* result in neutral system
   E <- 0.09
   #E <- 0.55 # increase climatic rate of fire for the test question
-  static_schematic <- plot_schem_static()
   
   ######################
   # expressions
@@ -169,9 +184,6 @@ server <- function(input, output) {
   fires <- reactive(get_fire_time(params = curr_params(),
                                   sim_df = sims()))
   
-  # reactive arrows for the schematic
-  LF_arrows <- reactive(plot_schem_arrows(params = curr_params()))
-  
   ######################
   # outputs
   ######################
@@ -182,48 +194,47 @@ server <- function(input, output) {
     Ep <- unname(temp_parameters["epsilon"])
     
     # first define the equation by colouring the dynamic variables with their appropriate colours
-    the_eqn <- paste0("$$\\small{ \\frac{\\delta T}{\\delta t} = \\overbrace{0.1 \\color{", colours_species["arbour"],
+    the_eqn <- paste0("$$\\scriptsize{ \\frac{\\delta T}{\\delta t} = \\overbrace{0.1 \\color{", colours_species["arbour"],
                       "}{T(1-T)}}^{\\text{biomass growth}} - \\overbrace{ \\color{", colour_fire,
                       "}{%.02f} \\color{", colours_species["arbour"],
                       "}{T}\\underbrace{(%.02f + \\color{", substring(colours_species["grass"], first=1, last=7),
                       "}{(1-T)})(1-\\color{", colours_species["arbour"],
                       "}{T})}_{\\text{frequency of fire}}}^{\\text{loss of biomass due to fire}}}$$")
-    
-    # # here's another version of the equation with the Ep parameter coloured in red
-    # the_eqn <- paste0("$$\\small{ \\frac{\\delta T}{\\delta t} = \\overbrace{0.1 \\color{", colours_species["arbour"],
-    #                   "}{T(1-T)}}^{\\text{biomass growth}} - \\overbrace{ %.02f \\color{", colours_species["arbour"],
-    #                   "}{T}\\underbrace{( \\color{", colour_fire,
-    #                   "}{%.02f} + \\color{", substring(colours_species["grass"], first=1, last=7),
-    #                   "}{(1-T)})(1-\\color{", colours_species["arbour"],
-    #                   "}{T})}_{\\text{frequency of fire}}}^{\\text{loss of biomass due to fire}}}$$")
-    
+       
     # then typeset the equation using MathJax
     withMathJax(sprintf(the_eqn, muA, Ep))
   })
-  # render model schematic natively:
-    # THIS WAS REMOVED FOR APP DEPLOYMENT bc it varies with participant window size
-  #output$plot_schematic <- renderPlot({static_schematic + LF_arrows()})
-  # render model schematic from saved png file
-  output$plot_schematic <- renderImage({
-    list(
-      src = file.path("model_schematics",
-                      paste0("schemL-", substring(as.character(input$muA_slider), 3, 4), ".png")),
-      contentType = "image/png",
-      height = 100,
-      width = 364
-    )
-  }, deleteFile = FALSE)
+
   # render Group Frequencies over Time plot
-  output$plot_species_time <- renderPlot({ggplot_t_finiteANDoutcome(sim_df = sims(),
-                                                                    steady_state = outcome())})
+  #output$plot_species_time <- renderPlot({ggplot_t_finiteANDoutcome(sim_df = sims(),
+  #                                                                  steady_state = outcome())})
+  
   # render Fire Frequencies over Time plot
-  output$plot_fire_time <- renderPlot({ggplot_fire_finiteANDoutcome(params = curr_params(),
-                                                                    sim_df = sims(),
-                                                                    fire_df = fires(),
-                                                                    steady_state = outcome())})
+  #output$plot_fire_time <- renderPlot({ggplot_fire_finiteANDoutcome(params = curr_params(),
+  #                                                                  sim_df = sims(),
+  #                                                                  fire_df = fires(),
+  #                                                                  steady_state = outcome())})
+# some code to see if patchwork is causing the X11 problem -- seems that it's not.
+  output$plot_fire_time <- renderPlot({ggplot_fire_inf(params = curr_params(),
+                                                       sim_df = sims(),
+                                                       fire_df = fires(),
+                                                       steady_state = outcome(),
+                                                       ylims = c(0, 1.1))})
+  
   # render T vs dT plot
-  output$plot_A_vs_dA <- renderPlot({plot_dA_by_A(dA.df = dA_df(),
-                                                  steady_state = outcome())})
+  #output$plot_A_vs_dA <- renderPlot({plot_dA_by_A(dA.df = dA_df(),
+  #                                                steady_state = outcome())})
+
+  # render model schematic from saved png file
+  #output$plot_schematic <- renderImage({
+  #  list(
+  #    src = file.path("model_schematics",
+  #                    paste0("schemL-", substring(as.character(input$muA_slider), 3, 4), ".png")),
+  #    contentType = "image/png",
+  #    height = 75, # 100,
+  #    width = 250 # 364
+  #  )
+  #}, deleteFile = FALSE)
 }
 
 # Complete app with UI and server components
