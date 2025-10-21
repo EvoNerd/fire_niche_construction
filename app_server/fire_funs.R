@@ -5,14 +5,14 @@
 
 library(deSolve)   # for solving ordinary differential equations
 library(ggplot2)   # for plotting the time series
-#library(patchwork) # for combining ggplots in the time series
+library(patchwork) # for combining ggplots in the time series
 
 # define colour scheme for species
 # use rgb to set transparency (alpha = 0.75) # note that max value for alpha is 255 so 0.75*255 ~ 191
 colours_species <- c(arbour = rgb(0, 102, 0, maxColorValue = 255, alpha = 191),  # Forest green
-                     grass = rgb(244, 212, 48, maxColorValue = 255, alpha = 191)) # Gold
-colour_dA <- "#2D1C56"
-colour_fire <- "#FF0000"
+                     grass = rgb(210, 176, 0, maxColorValue = 255, alpha = 191)) # Gold
+colour_dA <- "#8b81ab"
+colour_fire <- "#d93300"
 
 ###################################
 # define simulation functions
@@ -163,8 +163,8 @@ ggplot_t_finite <- function(sim_df){
   
   # create the plot
   finit_plot <- ggplot(sim_df,
-                       aes(x = time, y = density, colour = species, linewidth = 1)) +
-                  geom_line() +
+                       aes(x = time, y = density, colour = species)) +
+                  geom_line(linewidth = 2.5) +
                   scale_colour_manual(values = colours_species) +
                   scale_y_continuous(limits = c(-0.01, 1.01), expand = c(0, 0),
                                      breaks = seq(from=0, to=1, by=0.25),
@@ -241,9 +241,7 @@ ggplot_t_finiteANDoutcome <- function(sim_df, steady_state)
 # a function to plot dA as a function of A
 plot_dA_by_A <- function(dA.df, steady_state){
   # change the graphing settings
-  par(cex.lab = 2, # increase size of axis labels
-      cex.axis = 1.5, # increase size of tick mark labels 
-      mar = c(4.0, 4.4, 2.4, 0.85)) # decrease the borders
+  par(mar = c(3, 4.6, 1.3, 0.8)) # decrease the borders
   
   # when there's an unstable equilibrium point that is off to one side
   if(steady_state$outcome == "bistable"){
@@ -292,15 +290,18 @@ plot_dA_by_A <- function(dA.df, steady_state){
   
   # plot the points
   plot(x = dA.df$A, y = dA.df$dA,
-       pch = 16,
+       pch = 20,
        col = colour_dA, 
-       ylab = expression("Change in Trees (" * delta * "T)"),
-       xlab = "Tree density (T)",
+       ylab = expression("Change in Trees: " * delta * "T"),
+       xlab = "", # suppress default x-axis label
        ylim = limits_y,
        xlim = c(-0.01, 1.01), xaxs = "i", # set a fixed padding for x axis
        xaxt = "n", yaxt = "n"  # Suppress default tick labels for both x and y axes
   )
-  
+
+  # Add custom x-axis label with controlled margin
+  mtext("Tree density (T)", side = 1, line = 2, cex = 1)
+
   # Add custom x-axis tick labels
   axis(1, at = seq(from=0, to=1, by=0.25), labels = c("0", "", "0.5", "", "1"))
   
@@ -333,7 +334,7 @@ plot_dA_by_A <- function(dA.df, steady_state){
                col="white", cex=1.2, lwd=2)
         # Add the legend for the attractor
         legend("bottomright", "Attractor", pch=18, col=colours_species["arbour"],
-               cex=1.6, inset=c(0,0.95), xpd=TRUE, horiz=TRUE, bty="n"
+               cex=1.25, inset=c(0,0.9), xpd=TRUE, horiz=TRUE, bty="n"
               )
     
   } else if(steady_state$outcome == "A=0"){
@@ -347,7 +348,7 @@ plot_dA_by_A <- function(dA.df, steady_state){
                col="white", cex=1.2, lwd=2)
         # Add the legend for the attractor
         legend("bottomright", "Attractor", pch=18, col=colours_species["grass"],
-               cex=1.6, inset=c(0,0.95), xpd=TRUE, horiz=TRUE, bty="n"
+               cex=1.25, inset=c(0,0.9), xpd=TRUE, horiz=TRUE, bty="n"
               )
         
   } else if(steady_state$outcome == "bistable"){
@@ -368,11 +369,11 @@ plot_dA_by_A <- function(dA.df, steady_state){
            col="white", cex=1.2, lwd=2)
     # Add a legend with just the point for the grass attractor
     legend("bottomright", "Attractors", text.col="white", pch=18, col=colours_species["grass"],
-           cex=1.6, inset=c(0.03,0.95), xpd=TRUE, horiz=TRUE, bty="n"
+           cex=1.25, inset=c(0.05,0.9), xpd=TRUE, horiz=TRUE, bty="n"
           )
     # Add the legend for the tree attractor
     legend("bottomright", "Attractors", pch=18, col=colours_species["arbour"],
-           cex=1.6, inset=c(0,0.95), xpd=TRUE, horiz=TRUE, bty="n"
+           cex=1.25, inset=c(0,0.9), xpd=TRUE, horiz=TRUE, bty="n"
           )
   }
   
@@ -390,8 +391,8 @@ ggplot_fire_finite <- function(params, fire.df, ylims){
   
   # create the plot
   finit_plot <- ggplot(fire.df,
-                       aes(x = time, y = fire, linewidth = 1)) +
-    geom_line(colour = colour_fire) +
+                       aes(x = time, y = fire)) +
+    geom_line(colour = colour_fire, linewidth = 2.5) +
     scale_x_continuous(limits = c(min(fire.df$time), max(fire.df$time)), expand = c(0, 0),
                        breaks = labs_x,
                        labels = labs_x) +

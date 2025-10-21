@@ -41,15 +41,17 @@ Adjust how susceptible trees are to fire damage:
 
 - set $L > 0.09$: a lot of tree biomass is lost. **This is a system with two attractors.**
 
-*",html_col2,"Try sliding $L$ to see how the fire-susceptibility of trees changes the schematic and equation (panel 1).</span>
+*",html_col2,"Slide $L$ to see how the fire-susceptibility of trees changes the schematic and equation (panel 1).</span>
 <br>What other plots or equations change with $L$?*
 
 #### Slider 2. Initial tree density ($T_0$)
 
 Adjust the initial fraction of tree biomass $T_0$ at the start of the simulation.
 
-*",html_col2,"Try sliding $T_0$ to see how the tree density changes over time (panel 4).</span>
+*",html_col2,"Slide $T_0$ to see how the tree density changes over time (panel 4).</span>
 <br>Do any other plots change with $T_0$?*
+
+",html_col2,"Set $L > 0.09$ and vary $T_0$:</span> *How does the starting point change the outcome?*
 
 #### Slider 3. Number of years
 
@@ -68,7 +70,7 @@ The differential equation (bottom of panel 1) shows how the tree density, $T$, c
 
 - **Panel 2:** Shows in which direction and how quickly the tree density is changing.
 
-- **Panel 4:** Shows how the tree and grass biomass will grow, or shrink, over time.
+- **Panel 4:** Shows how the density of tree and grass biomass will grow, or shrink, over time.
 
 *",html_col2,"Play with the sliders to explore how the fraction of trees lost per fire ($L$) and initial conditions ($T_0$) shape the long-term outcome.</span>
 <br>Can trees dominate if they are initially rare? Which values of $L$ make this possible?*")

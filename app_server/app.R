@@ -8,8 +8,8 @@ source("fire_funs.R")
 source("fire_text.R")
 
 # I'm getting an error message "unable to open connection to X11 display"
-#library(Cairo) # this should fix it but it seems that Cairo isn't installed on the server
-#options(bitmapType = "cairo") # set headless graphics device
+library(Cairo) # this should fix it but it seems that Cairo isn't installed on the server
+options(bitmapType = "cairo") # set headless graphics device
 
 library(shiny) # for app
 library(bslib) # for most recent recommended UI options
@@ -81,7 +81,7 @@ ui <- fluidPage(
     nav_panel("Introduction",
               markdown(text_intro)),
 
-    nav_panel("How to use the app & Things to try", markdown(text_howto)),
+    nav_panel("App How-to & Things to Try", markdown(text_howto)),
     
     nav_panel("What's going on?", markdown(text_huh)),
     
@@ -124,7 +124,7 @@ ui <- fluidPage(
                  gap = "0rem", # removes the whitespace between cards
     card(
       card_header("1. Model schematic & Equation"),
-      card_body(#imageOutput("plot_schematic", height = 55, width="75%"),
+      card_body(imageOutput("plot_schematic", height = 55, width="75%"),
                 uiOutput("dynamEq", height = 30),
       height="160px",
       class = "align-items-center")
@@ -136,17 +136,17 @@ ui <- fluidPage(
     ),
     card(
       card_header("2. Change in Tree density"),
-      #plotOutput("plot_A_vs_dA"),
+      plotOutput("plot_A_vs_dA"),
       height="200px"
     ),
     card(
-      card_header("4. Tree & Grass density over Time"),
-      #plotOutput("plot_species_time"),
+      card_header("4. Trees & Grasses over Time"),
+      plotOutput("plot_species_time"),
       height="200px"
     ),
     col_widths = breakpoints(
-      sm = rep(12, times = 4), # for portrait-mode phones, display in a single column
-      md = c(7, 5, 7, 5), # left column is wider than right column
+      #sm = rep(12, times = 4), # for portrait-mode phones, display in a single column
+      sm = c(7, 5, 7, 5), # left column is wider than right column
       lg = rep(6, times=4) # columns are equally sized when it gets wide enough
     )
   )
@@ -206,35 +206,29 @@ server <- function(input, output) {
   })
 
   # render Group Frequencies over Time plot
-  #output$plot_species_time <- renderPlot({ggplot_t_finiteANDoutcome(sim_df = sims(),
-  #                                                                  steady_state = outcome())})
+  output$plot_species_time <- renderPlot({ggplot_t_finiteANDoutcome(sim_df = sims(),
+                                                                    steady_state = outcome())})
   
   # render Fire Frequencies over Time plot
-  #output$plot_fire_time <- renderPlot({ggplot_fire_finiteANDoutcome(params = curr_params(),
-  #                                                                  sim_df = sims(),
-  #                                                                  fire_df = fires(),
-  #                                                                  steady_state = outcome())})
-# some code to see if patchwork is causing the X11 problem -- seems that it's not.
-  output$plot_fire_time <- renderPlot({ggplot_fire_inf(params = curr_params(),
-                                                       sim_df = sims(),
-                                                       fire_df = fires(),
-                                                       steady_state = outcome(),
-                                                       ylims = c(0, 1.1))})
+  output$plot_fire_time <- renderPlot({ggplot_fire_finiteANDoutcome(params = curr_params(),
+                                                                   sim_df = sims(),
+                                                                   fire_df = fires(),
+                                                                   steady_state = outcome())})
   
   # render T vs dT plot
-  #output$plot_A_vs_dA <- renderPlot({plot_dA_by_A(dA.df = dA_df(),
-  #                                                steady_state = outcome())})
+  output$plot_A_vs_dA <- renderPlot({plot_dA_by_A(dA.df = dA_df(),
+                                                  steady_state = outcome())})
 
   # render model schematic from saved png file
-  #output$plot_schematic <- renderImage({
-  #  list(
-  #    src = file.path("model_schematics",
-  #                    paste0("schemL-", substring(as.character(input$muA_slider), 3, 4), ".png")),
-  #    contentType = "image/png",
-  #    height = 75, # 100,
-  #    width = 250 # 364
-  #  )
-  #}, deleteFile = FALSE)
+  output$plot_schematic <- renderImage({
+   list(
+     src = file.path("model_schematics",
+                     paste0("schemL-", substring(as.character(input$muA_slider), 3, 4), ".png")),
+     contentType = "image/png",
+     height = 75, # 100,
+     width = 250 # 364
+   )
+  }, deleteFile = FALSE)
 }
 
 # Complete app with UI and server components
