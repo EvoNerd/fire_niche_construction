@@ -79,11 +79,15 @@ The differential equation (bottom of panel 1) shows how the tree density, $T$, c
 
 
 # Fire feedback
-text_feedback <- paste0("There is an ecological feedback between the density of trees and the frequency of fires (top of panel 1). Fires occur rarely when tree density is high, but often when tree density is low.
+text_feedback <- paste0("There is an ecological feedback between the density of trees and the frequency of fires (top of panel 1). Fires occur rarely when tree density is high, but often when tree density is low. You can visualize this by sliding the initial tree density ($T_0$) and seeing how the **initial fire frequency at time 0** changes in panel 3.
 
-The equation (bottom of panel 1) shows the frequency of fires as a function of tree density. You can visualize it by sliding initial tree density ($T_0$) and seeing how the initial fire frequency at time 0 changes in panel 3.
+",html_col2,"**Key insight 1:**</span> When trees are rare ($T$ is small), grasses and fires are common. Rare trees can only increase in density if few are lost per fire!
 
-",html_col2,"**Key insight:**</span> When trees are rare ($T$ is small), grasses and fires are common. Rare trees can only increase in density if few are lost per fire!")
+The differential equation (bottom of panel 1) shows how trees change as a function of their current density, and is also visualized in panel 2. Look at how panel 2 changes when you slide the trees lost per fire ($L$) slider.
+
+The ecological feedback can get locked-in if the fraction of trees lost per fire ($L$) is sufficiently large.
+
+",html_col2,"**Key insight 2:**</span> When the fraction of trees lost per fire is small ($L&le;0.09$), the differential equation is always positive, so there is only 1 attractor.  When the fraction of trees lost per fire is sufficiently large ($L>0.09$), the differential equation can be positive or negative, so there are 2 attractors.")
 
 
 

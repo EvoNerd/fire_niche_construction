@@ -85,7 +85,7 @@ ui <- fluidPage(
     
     nav_panel("What's going on?", markdown(text_huh)),
     
-    nav_panel("Key Insight", markdown(text_feedback)),
+    nav_panel("Key Insights", markdown(text_feedback)),
     
     #nav_panel("Things to try", markdown(text_try)),
     
