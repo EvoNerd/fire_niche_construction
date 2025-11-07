@@ -292,7 +292,7 @@ plot_dA_by_A <- function(dA.df, steady_state){
   plot(x = dA.df$A, y = dA.df$dA,
        pch = 20,
        col = colour_dA, 
-       ylab = expression("Change in Trees: " * delta * "T"),
+       ylab = "", # suppress default y-axis label
        xlab = "", # suppress default x-axis label
        ylim = limits_y,
        xlim = c(-0.01, 1.01), xaxs = "i", # set a fixed padding for x axis
@@ -305,6 +305,10 @@ plot_dA_by_A <- function(dA.df, steady_state){
   # Add custom x-axis tick labels
   axis(1, at = seq(from=0, to=1, by=0.25), labels = c("0", "", "0.5", "", "1"))
   
+  # Add custom y-axis label
+  mtext(expression("Change in Trees: " * delta * "T/" * delta * "t"),
+        side=2, padj=-3, adj=0.7) 
+
   # custom y-axis tick labels
     # find which side of plot is furthest from 0
   if (which.max(abs(range(dA.df$dA))) == 1){ # bottom side furthest from 0
